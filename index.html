@@ -1,0 +1,1647 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Családi ház – 3D látványterv | Hrsz. 556/2</title>
+<style>
+  :root{--bg:rgba(20,18,16,.72);--fg:#f3eee6;--acc:#c98a5a;}
+  html,body{margin:0;height:100%;overflow:hidden;background:#111;font-family:"Segoe UI",system-ui,sans-serif;color:var(--fg)}
+  canvas#c{display:block;width:100%;height:100%}
+  .panel{position:absolute;background:var(--bg);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:12px 14px;font-size:13px;user-select:none}
+  #left{top:14px;left:14px;width:230px}
+  #left h1{font-size:15px;margin:0 0 2px;font-weight:600;letter-spacing:.3px}
+  #left .sub{opacity:.65;font-size:11.5px;margin-bottom:10px}
+  .grp{margin:10px 0 4px;font-size:11px;text-transform:uppercase;letter-spacing:1px;opacity:.6}
+  .btns{display:flex;flex-wrap:wrap;gap:5px}
+  button{background:rgba(255,255,255,.08);color:var(--fg);border:1px solid rgba(255,255,255,.12);border-radius:7px;padding:5px 8px;font-size:12px;cursor:pointer;font-family:inherit}
+  button:hover{background:rgba(255,255,255,.18)}
+  button.on{background:var(--acc);border-color:var(--acc);color:#1a120c;font-weight:600}
+  input[type=range]{width:100%;accent-color:var(--acc)}
+  #mapWrap{bottom:14px;right:14px;padding:8px}
+  #map{display:block;cursor:crosshair}
+  #room{top:14px;left:50%;transform:translateX(-50%);font-size:14px;letter-spacing:.5px;padding:7px 16px}
+  #help{bottom:14px;left:14px;font-size:12px;line-height:1.55;opacity:.9}
+  #help b{color:var(--acc)}
+  #cross{position:absolute;left:50%;top:50%;width:6px;height:6px;margin:-3px 0 0 -3px;border-radius:50%;background:rgba(255,255,255,.55);pointer-events:none;display:none}
+  #start{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at center,rgba(0,0,0,.35),rgba(0,0,0,.7));cursor:pointer}
+  #start .card{background:var(--bg);padding:26px 34px;border-radius:16px;text-align:center;max-width:420px;border:1px solid rgba(255,255,255,.1)}
+  #start h2{margin:0 0 8px;font-weight:600}
+  #start p{margin:6px 0;opacity:.8;font-size:13.5px;line-height:1.5}
+  #start .go{margin-top:14px;display:inline-block;background:var(--acc);color:#1a120c;padding:9px 20px;border-radius:9px;font-weight:600}
+  body.clean .panel,body.clean #cross{display:none!important}
+  #joy{position:absolute;left:28px;bottom:28px;width:130px;height:130px;border-radius:50%;background:rgba(20,18,16,.45);border:2px solid rgba(255,255,255,.25);touch-action:none;display:none;z-index:5}
+  #joy i{position:absolute;left:50%;top:50%;width:56px;height:56px;margin:-28px 0 0 -28px;border-radius:50%;background:rgba(201,138,90,.85);border:1px solid rgba(255,255,255,.4);pointer-events:none}
+  #menuBtn{position:absolute;top:14px;left:14px;display:none;z-index:6;padding:9px 13px;font-size:16px}
+  canvas#c{touch-action:none}
+  body.mobile #help,body.mobile .desk{display:none!important}
+  body.mobile .mob{display:block!important}
+  body.mobile #menuBtn,body.mobile #hideBtn{display:block}
+  #hideBtn{position:absolute;top:14px;right:14px;display:none;z-index:6;width:38px;height:38px;padding:0;font-size:16px;background:var(--bg);border-radius:12px}
+  body.mobile.clean #hideBtn{opacity:.45}
+  body.mobile #left{display:none;top:58px;max-height:calc(100% - 80px);overflow:auto;z-index:6}
+  body.mobile.menu #left{display:block}
+  body.mobile.walk #joy{display:block}
+  body.mobile #room{top:14px;left:auto;right:62px;transform:none;font-size:12px;max-width:45vw;text-align:right}
+  body.mobile #mapWrap{padding:5px;bottom:14px;right:14px}
+  body.mobile #map{width:120px;height:auto}
+  .mob{display:none}
+  .sw{display:flex;align-items:center;gap:9px;margin-top:9px;cursor:pointer;font-size:12.5px}
+  .sw input{display:none}
+  .sw i{position:relative;flex:none;width:36px;height:20px;border-radius:10px;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.15);transition:background .2s}
+  .sw i:after{content:"";position:absolute;left:2px;top:2px;width:14px;height:14px;border-radius:50%;background:#f3eee6;transition:left .2s}
+  .sw input:checked+i{background:var(--acc)}
+  .sw input:checked+i:after{left:18px}
+  .sw.dollOnly{display:none}
+  body.doll .sw.dollOnly{display:flex}
+  #err{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:#1b1917;padding:30px;text-align:center;line-height:1.6}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="cross"></div>
+<button id="menuBtn" class="panel">☰</button>
+<div id="joy"><i></i></div>
+<button id="hideBtn" title="Panelek elrejtése/megjelenítése">▣</button>
+<div id="left" class="panel">
+  <h1>Családi ház – 3D látványterv</h1>
+  <div class="sub">Hrsz. 556/2 · földszint 92,75 m² + 15,31 m² terasz · M 1:1</div>
+  <div class="grp">Helyiségek</div>
+  <div class="btns" id="roomBtns"></div>
+  <div class="grp">Hangulat / napszak</div>
+  <div class="btns" id="modeBtns"><button data-m="day" class="on">Nappal</button><button data-m="dusk">Alkony</button><button data-m="night">Éjszaka</button></div>
+  <div class="grp">Nézet</div>
+  <div class="btns" id="viewBtns"><button data-v="walk" class="on">Bejárás</button><button data-v="doll">Makett (felülnézet)</button></div>
+  <label class="sw dollOnly" title="Billentyű: T"><input type="checkbox" id="roofChk" checked><i></i><span>Tető megjelenítése</span></label>
+  <div class="grp">Fényerő (expozíció)</div>
+  <input type="range" id="expo" min="0.4" max="2.2" step="0.02" value="1">
+  <div class="grp">Látószög</div>
+  <input type="range" id="fov" min="50" max="100" step="1" value="70">
+  <div class="grp">Minőség</div>
+  <div class="btns" id="qBtns"><button data-q="1">Normál</button><button data-q="2" class="on">Magas</button></div>
+</div>
+<div id="room" class="panel">Utca – Hrsz. 556/2</div>
+<div id="help" class="panel">
+  <b>Kattints</b> a képre a bejáráshoz · <b>W A S D</b> / nyilak: mozgás · <b>Egér</b>: körbenézés<br>
+  <b>Shift</b>: gyorsabb · <b>ajtók</b>: automatikusan nyílnak · <b>Esc</b>: egér felszabadítása · <b>Térkép</b>: kattintással ugrás · <b>X</b>: panelek elrejtése/megjelenítése · <b>T</b>: tető ki/be (makett nézetben)
+</div>
+<div id="mapWrap" class="panel"><canvas id="map" width="290" height="226"></canvas></div>
+<div id="start"><div class="card">
+  <h2>Családi ház – 3D látványterv</h2>
+  <p>A földszinti alaprajz (M 1:100), a helyszínrajz és a két szoba berendezési rajza alapján, méretarányosan. A 10-es helyiség (volt gardrób) északi fala 50 cm-rel feljebb került, ajtaja a helyén maradt. Anyagok a homlokzati látványterv szerint: fehér vakolat, antracit nyílászárók, fa oromzat, kőpillérek, sötét cserépfedés.</p>
+  <p class="desk">Egér + billentyűzet ajánlott.</p>
+  <p class="mob">Mozgás: joystick (bal alsó sarok) · Körbenézés: húzd az ujjad a képen · Menü: ☰</p>
+  <span class="go">Bejárás indítása</span>
+  <p style="font-size:12px;opacity:.6;margin-top:12px">Tipp: a bejárati és a teraszajtó magától kinyílik, ha odasétálsz.</p>
+</div></div>
+<div id="err"><div>
+  <h2>A three.js könyvtár nem töltődött be</h2>
+  <p>Teljesen offline használathoz tedd a <b>three.min.js</b> fájlt (0.158.0 verzió) ugyanabba a mappába, ahol ez a HTML van.<br>
+  Letöltés (egyszer, internettel): https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js</p>
+</div></div>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.module.js"}}</script>
+<script src="three.min.js"></script>
+<script>
+if(!window.THREE){document.write('<script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"><\/script>');}
+</script>
+<script>
+(function(){
+'use strict';
+if(!window.THREE){document.getElementById('err').style.display='flex';document.getElementById('start').style.display='none';return;}
+const T=THREE, PI=Math.PI;
+const H=2.70, GROUND=-0.30, EYE=1.65;
+const TEST=location.hash.indexOf('test')>=0;
+
+const canvas=document.getElementById('c');
+const renderer=new T.WebGLRenderer({canvas,antialias:true,powerPreference:'high-performance'});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+renderer.setSize(innerWidth,innerHeight);
+renderer.outputColorSpace=T.SRGBColorSpace;
+renderer.toneMapping=T.ACESFilmicToneMapping;
+renderer.toneMappingExposure=1;
+renderer.shadowMap.enabled=true;
+renderer.shadowMap.type=T.PCFSoftShadowMap;
+renderer.shadowMap.autoUpdate=false;
+const scene=new T.Scene();
+const camera=new T.PerspectiveCamera(70,innerWidth/innerHeight,0.05,600);
+camera.rotation.order='YXZ';
+const MAXANI=renderer.capabilities.getMaxAnisotropy();
+
+// ---------------- helpers ----------------
+function rng(seed){let a=seed>>>0;return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+function cv(w,h){const c=document.createElement('canvas');c.width=w;c.height=h;return c;}
+function ctex(c,srgb=true){const t=new T.CanvasTexture(c);t.wrapS=t.wrapT=T.RepeatWrapping;t.anisotropy=MAXANI;if(srgb)t.colorSpace=T.SRGBColorSpace;t.needsUpdate=true;return t;}
+function shade(hex,f){const c=new T.Color(hex);return '#'+c.offsetHSL(0,0,f).getHexString();}
+
+function travertineTex(opt){
+  const S=1024,c=cv(S,S),g=c.getContext('2d'),r=rng(opt.seed||7);
+  const cols=opt.cols,rows=opt.rows,tw=S/cols,th=S/rows;
+  g.fillStyle=opt.grout;g.fillRect(0,0,S,S);
+  for(let j=0;j<rows;j++)for(let i=0;i<cols;i++){
+    const x=i*tw,y=j*th,base=new T.Color(opt.base).offsetHSL(0,(r()-.5)*.02,(r()-.5)*opt.vary);
+    g.fillStyle='#'+base.getHexString();g.fillRect(x+1.5,y+1.5,tw-3,th-3);
+    g.save();g.beginPath();g.rect(x+1.5,y+1.5,tw-3,th-3);g.clip();
+    for(let k=0;k<opt.veins;k++){const yy=y+r()*th,a=r()*.10;g.strokeStyle=r()<.5?`rgba(255,250,240,${a})`:`rgba(120,100,80,${a*.8})`;
+      g.lineWidth=1+r()*4;g.beginPath();g.moveTo(x,yy);for(let s=0;s<=8;s++)g.lineTo(x+tw*s/8,yy+(r()-.5)*6);g.stroke();}
+    for(let k=0;k<350;k++){g.fillStyle=`rgba(90,70,50,${r()*.08})`;g.fillRect(x+r()*tw,y+r()*th,1+r()*3,1);}
+    g.restore();}
+  return ctex(c);
+}
+function oakTex(){
+  const S=1024,c=cv(S,S),g=c.getContext('2d'),r=rng(3),rows=12,ph=S/rows;
+  g.fillStyle='#9c7e60';g.fillRect(0,0,S,S);
+  for(let j=0;j<rows;j++){let x=-r()*S*.5;
+    while(x<S){const len=S*.5*(0.8+r()*.4);
+      const base=new T.Color('#d2b28c').offsetHSL((r()-.5)*.015,(r()-.5)*.05,(r()-.5)*.09);
+      g.fillStyle='#'+base.getHexString();g.fillRect(x+1,j*ph+1,len-2,ph-2);
+      g.save();g.beginPath();g.rect(x+1,j*ph+1,len-2,ph-2);g.clip();
+      for(let k=0;k<22;k++){const yy=j*ph+r()*ph;g.strokeStyle=`rgba(${r()<.5?70:230},${r()<.5?45:200},30,${.05+r()*.09})`;g.lineWidth=.6+r()*1.6;
+        g.beginPath();g.moveTo(x,yy);const amp=1+r()*3,f=.005+r()*.02,p=r()*6;for(let s=0;s<=len;s+=8)g.lineTo(x+s,yy+Math.sin(s*f+p)*amp);g.stroke();}
+      if(r()<.25){const kx=x+r()*len,ky=j*ph+ph*.5;g.fillStyle='rgba(80,50,30,.35)';g.beginPath();g.ellipse(kx,ky,7,3,0,0,7);g.fill();}
+      g.restore();x+=len;}}
+  return ctex(c);
+}
+// fa erezet – base szín paraméterrel (világos bútorfa / sötétebb nyílászáró)
+function woodTex(base,vertical=true,seed=11){
+  const S=512,c=cv(S,S),g=c.getContext('2d'),r=rng(seed);
+  g.fillStyle=base;g.fillRect(0,0,S,S);
+  for(let k=0;k<160;k++){const x=r()*S;g.strokeStyle=`rgba(${r()<.5?60:250},${r()<.5?40:225},${r()<.5?20:190},${.05+r()*.1})`;g.lineWidth=.5+r()*2.5;
+    g.beginPath();const f=.004+r()*.01,a=2+r()*8,p=r()*6;for(let y=0;y<=S;y+=6)g.lineTo(x+Math.sin(y*f+p)*a,y);g.stroke();}
+  if(!vertical){const c2=cv(S,S),g2=c2.getContext('2d');g2.translate(S/2,S/2);g2.rotate(PI/2);g2.drawImage(c,-S/2,-S/2);return ctex(c2);}
+  return ctex(c);
+}
+function stoneTex(){
+  const W=1024,Hh=1024,c=cv(W,Hh),g=c.getContext('2d'),b=cv(W,Hh),gb=b.getContext('2d'),r=rng(21);
+  const pal=['#c9b89c','#a8916f','#8e7b62','#d9ccb4','#b69f7f','#7f6c57','#c2a47c','#9c8a76'];
+  g.fillStyle='#4a3f35';g.fillRect(0,0,W,Hh);gb.fillStyle='#000';gb.fillRect(0,0,W,Hh);
+  let y=0;
+  while(y<Hh){const rh=18+r()*42;let x=-r()*120;
+    while(x<W){const sw=60+r()*260,col=pal[(r()*pal.length)|0];const x0=x+2,y0=y+2,w=sw-4,h=rh-4;
+      const grd=g.createLinearGradient(0,y0,0,y0+h);grd.addColorStop(0,shade(col,.06));grd.addColorStop(.6,col);grd.addColorStop(1,shade(col,-.12));
+      g.fillStyle=grd;g.beginPath();g.moveTo(x0+r()*4,y0);g.lineTo(x0+w-r()*4,y0+r()*2);g.lineTo(x0+w,y0+h-r()*3);g.lineTo(x0+r()*3,y0+h);g.closePath();g.fill();
+      for(let k=0;k<40;k++){g.fillStyle=`rgba(${r()<.5?40:255},${r()<.5?30:245},20,${r()*.12})`;g.fillRect(x0+r()*w,y0+r()*h,1+r()*5,1+r()*2);}
+      const gg=gb.createLinearGradient(0,y0,0,y0+h);const v=150+r()*90;gg.addColorStop(0,`rgb(${v},${v},${v})`);gg.addColorStop(1,`rgb(${v*.7|0},${v*.7|0},${v*.7|0})`);
+      gb.fillStyle=gg;gb.fillRect(x0,y0,w,h);x+=sw;}
+    y+=rh;}
+  return {map:ctex(c),bump:ctex(b,false)};
+}
+function fabricBump(){const S=256,c=cv(S,S),g=c.getContext('2d'),r=rng(5);g.fillStyle='#808080';g.fillRect(0,0,S,S);
+  for(let i=0;i<9000;i++){const v=(r()*255)|0;g.fillStyle=`rgba(${v},${v},${v},.5)`;g.beginPath();g.arc(r()*S,r()*S,.6+r()*1.4,0,7);g.fill();}return ctex(c,false);}
+function grassTex(){const S=512,c=cv(S,S),g=c.getContext('2d'),r=rng(9);g.fillStyle='#4f7a35';g.fillRect(0,0,S,S);
+  for(let i=0;i<26000;i++){const cc=new T.Color('#4f7a35').offsetHSL((r()-.5)*.05,(r()-.5)*.1,(r()-.5)*.14);g.fillStyle='#'+cc.getHexString();g.fillRect(r()*S,r()*S,1,2+r()*4);}return ctex(c);}
+function concreteTex(){const S=512,c=cv(S,S),g=c.getContext('2d'),r=rng(13);g.fillStyle='#9d9890';g.fillRect(0,0,S,S);
+  for(let i=0;i<9000;i++){g.fillStyle=`rgba(${r()<.5?60:220},${r()<.5?60:215},60,${r()*.08})`;g.fillRect(r()*S,r()*S,1+r()*6,1+r()*6);}return ctex(c);}
+function rugTex(base,line){const S=512,c=cv(S,S),g=c.getContext('2d'),r=rng(17);g.fillStyle=base;g.fillRect(0,0,S,S);
+  for(let i=0;i<30000;i++){g.fillStyle=`rgba(${r()<.5?0:255},${r()<.5?0:255},${r()<.5?0:255},${r()*.05})`;g.fillRect(r()*S,r()*S,1,1);}
+  g.strokeStyle=line;g.lineWidth=6;g.strokeRect(26,26,S-52,S-52);g.lineWidth=2;g.strokeRect(40,40,S-80,S-80);return ctex(c);}
+function kidsRugTex(){const S=512,c=cv(S,S),g=c.getContext('2d'),r=rng(41);g.fillStyle='#ece3d4';g.fillRect(0,0,S,S);
+  for(let i=0;i<30000;i++){g.fillStyle=`rgba(${r()<.5?0:255},${r()<.5?0:255},${r()<.5?0:255},${r()*.05})`;g.fillRect(r()*S,r()*S,1,1);}
+  const cols=['#a9ad96','#c98a5a','#d2a44f','#8fa3b0'];
+  for(let j=0;j<6;j++)for(let i=0;i<6;i++){g.fillStyle=cols[(i+j)%4];g.globalAlpha=.8;g.beginPath();g.arc(43+i*85+(j%2)*20,43+j*85,11,0,7);g.fill();}
+  g.globalAlpha=1;g.strokeStyle='#c8b9a2';g.lineWidth=8;g.strokeRect(12,12,S-24,S-24);return ctex(c);}
+function artTex(seed,pal){const c=cv(512,340),g=c.getContext('2d'),r=rng(seed);g.fillStyle=pal[0];g.fillRect(0,0,512,340);
+  for(let i=0;i<7;i++){g.fillStyle=pal[1+(i%(pal.length-1))];g.globalAlpha=.55+r()*.4;g.beginPath();
+    if(r()<.5)g.arc(60+r()*400,40+r()*260,30+r()*110,0,PI*2);else g.ellipse(60+r()*400,40+r()*260,40+r()*140,20+r()*70,r()*3,0,PI*2);g.fill();}
+  g.globalAlpha=.9;g.strokeStyle='#2a2522';g.lineWidth=3;g.beginPath();g.moveTo(40,260);g.bezierCurveTo(160,120,300,330,470,90);g.stroke();
+  g.globalAlpha=.08;for(let i=0;i<5000;i++){g.fillStyle=r()<.5?'#000':'#fff';g.fillRect(r()*512,r()*340,1,1);}return ctex(c);}
+function kidsArtTex(seed){const c=cv(340,440),g=c.getContext('2d');g.fillStyle='#f3ece0';g.fillRect(0,0,340,440);
+  g.fillStyle='#e0b27a';g.beginPath();g.arc(240,130,48,0,7);g.fill();
+  const hills=['#b9c2a8','#8fa18a','#c98a5a'];for(let i=0;i<3;i++){g.fillStyle=hills[i];g.beginPath();g.moveTo(0,440);const b=260+i*50;
+    g.lineTo(0,b);for(let x=0;x<=340;x+=20)g.lineTo(x,b-Math.abs(Math.sin((x+seed*40+i*70)*.012))*(90-i*20));g.lineTo(340,440);g.fill();}
+  return ctex(c);}
+function plateTex(){const c=cv(256,56),g=c.getContext('2d');g.fillStyle='#f4f4f0';g.fillRect(0,0,256,56);g.fillStyle='#1d3f9a';g.fillRect(0,0,26,56);
+  g.fillStyle='#fff';g.font='bold 18px Arial';g.textAlign='center';g.textBaseline='middle';g.fillText('H',13,40);
+  g.fillStyle='#f2c400';for(let i=0;i<12;i++){const a=i*PI/6;g.fillRect(13+Math.cos(a)*7-1,17+Math.sin(a)*7-1,2,2);}
+  g.fillStyle='#111';g.font='bold 36px Arial';g.textAlign='center';g.textBaseline='middle';g.fillText('BK-768-LI',142,30);g.strokeStyle='#222';g.lineWidth=3;g.strokeRect(1.5,1.5,253,53);return ctex(c);}
+function roundelTex(){const c=cv(256,256),g=c.getContext('2d');g.fillStyle='#111';g.beginPath();g.arc(128,128,127,0,7);g.fill();
+  g.strokeStyle='#cfcfcf';g.lineWidth=5;g.beginPath();g.arc(128,128,122,0,7);g.stroke();g.beginPath();g.arc(128,128,80,0,7);g.stroke();
+  const q=['#f4f4f4','#2a74c9'];for(let i=0;i<4;i++){g.fillStyle=q[i%2];g.beginPath();g.moveTo(128,128);g.arc(128,128,77,-PI/2+i*PI/2,i*PI/2);g.fill();}
+  g.fillStyle='#fff';g.font='bold 36px Arial';g.textAlign='center';g.textBaseline='middle';
+  for(const [ch,a] of [['B',-.6],['M',0],['W',.6]]){g.save();g.translate(128+Math.sin(a)*101,128-Math.cos(a)*101);g.rotate(a);g.fillText(ch,0,0);g.restore();}
+  return ctex(c);}
+// fonott rattan (átlátszó mintával) a függőfotelhez
+function rattanTex(){const S=512,c=cv(S,S),g=c.getContext('2d'),r=rng(77);g.clearRect(0,0,S,S);g.strokeStyle='#26221f';g.lineCap='round';
+  for(let i=0;i<70;i++){g.lineWidth=5+r()*4;g.beginPath();const x=r()*S,y=r()*S,rr=25+r()*55;g.ellipse(x,y,rr,rr*(.6+r()*.5),r()*3,0,PI*2);g.stroke();
+    for(const dx of [-S,S])for(const dy of [-S,0,S]){g.beginPath();g.ellipse(x+dx,y+dy,rr,rr*.8,0,0,PI*2);g.stroke();}}
+  const t=ctex(c);t.repeat.set(4,3);return t;}
+function gradTex(){const c=cv(4,128),g=c.getContext('2d'),gr=g.createLinearGradient(0,0,0,128);gr.addColorStop(0,'#000');gr.addColorStop(1,'#fff');g.fillStyle=gr;g.fillRect(0,0,4,128);return new T.CanvasTexture(c);}
+function blobTex(){const c=cv(128,128),g=c.getContext('2d'),gr=g.createRadialGradient(64,64,10,64,64,64);gr.addColorStop(0,'#fff');gr.addColorStop(.55,'#888');gr.addColorStop(1,'#000');g.fillStyle=gr;g.fillRect(0,0,128,128);return new T.CanvasTexture(c);}
+
+const TX={
+  floorTile:travertineTex({cols:2,rows:4,base:'#d8cfc2',grout:'#b9ad9d',vary:.05,veins:14,seed:4}),
+  bathFloor:travertineTex({cols:2,rows:4,base:'#bdb4a8',grout:'#9d9488',vary:.035,veins:8,seed:8}),
+  bathWall:travertineTex({cols:4,rows:2,base:'#a99f93',grout:'#8c8479',vary:.03,veins:10,seed:12}),
+  terrace:travertineTex({cols:4,rows:4,base:'#d6cebf',grout:'#b3a898',vary:.06,veins:10,seed:31}),
+  oak:oakTex(),
+  lightWood:woodTex('#c29f78',true), lightWoodH:woodTex('#c29f78',false),   // világos tölgy bútorfa
+  darkWood:woodTex('#6a4530',true,19),                                       // nyílászárók, pergola (homlokzat szerint)
+  stone:stoneTex(), fabric:fabricBump(), grass:grassTex(), concrete:concreteTex(), grad:gradTex(), blob:blobTex(),
+  rugLiving:rugTex('#cfc4b3','#b6a58e'), rugBed:rugTex('#a9a397','#bcb6aa'), rugKids:kidsRugTex(), plate:plateTex(), rattan:rattanTex(), roundel:roundelTex(),
+};
+
+const allStd=[];
+function M(p){const m=new T.MeshStandardMaterial(p);allStd.push(m);return m;}
+function MP(p){const m=new T.MeshPhysicalMaterial(p);allStd.push(m);return m;}
+const MAT={
+  wall:M({color:'#efebe4',roughness:.92}), ceil:M({color:'#f6f4f0',roughness:.95}), extWall:M({color:'#ece5d8',roughness:.95}),
+  plinth:M({color:'#7b5d47',roughness:.9}),
+  floorTile:M({map:TX.floorTile,roughness:.38}), bathFloor:M({map:TX.bathFloor,roughness:.45}), bathWall:M({map:TX.bathWall,roughness:.35}),
+  terrace:M({map:TX.terrace,roughness:.8}), oak:M({map:TX.oak,roughness:.55}),
+  wood:M({map:TX.lightWood,roughness:.55}), woodH:M({map:TX.lightWoodH,roughness:.55}),
+  frame:M({map:TX.darkWood,color:'#d09a70',roughness:.5}),
+  entryDoor:M({map:TX.darkWood,color:'#e9a270',roughness:.5}),
+  trunk:M({map:TX.darkWood,roughness:.9}),
+  stone:M({map:TX.stone.map,bumpMap:TX.stone.bump,bumpScale:3,roughness:.92}),
+  quartz:M({color:'#eeebe5',roughness:.18}), white:M({color:'#f1eee8',roughness:.6}), greige:M({color:'#d3cabd',roughness:.65}),
+  appl:M({color:'#f5f4f1',roughness:.28}),
+  black:M({color:'#1b1a19',roughness:.45,metalness:.6}), blackMatte:M({color:'#202020',roughness:.8}),
+  steel:M({color:'#b8b8b8',roughness:.25,metalness:1}), brass:M({color:'#c9a46a',roughness:.3,metalness:1}),
+  ceramic:M({color:'#fbfbf9',roughness:.12}),
+  fabricCream:M({color:'#e6ded0',roughness:1,bumpMap:TX.fabric,bumpScale:.6}),
+  fabricGray:M({color:'#c4bdb2',roughness:1,bumpMap:TX.fabric,bumpScale:.6}),
+  fabricTerra:M({color:'#b3653f',roughness:1,bumpMap:TX.fabric,bumpScale:.6}),
+  fabricOlive:M({color:'#7b7a55',roughness:1,bumpMap:TX.fabric,bumpScale:.6}),
+  fabricSage:M({color:'#a9ad96',roughness:1,bumpMap:TX.fabric,bumpScale:.6}),
+  fabricBlue:M({color:'#8098a8',roughness:1,bumpMap:TX.fabric,bumpScale:.6}),
+  fabricMustard:M({color:'#c99a45',roughness:1,bumpMap:TX.fabric,bumpScale:.6}),
+  fabricBlush:M({color:'#d6aa9b',roughness:1,bumpMap:TX.fabric,bumpScale:.6}),
+  fabricChair:M({color:'#b3a797',roughness:1,bumpMap:TX.fabric,bumpScale:.6}),
+  cushionGray:M({color:'#b9b9b6',roughness:1,bumpMap:TX.fabric,bumpScale:.8}),
+  linen:M({color:'#f3efe8',roughness:1,bumpMap:TX.fabric,bumpScale:.4}),
+  leather:M({color:'#bf8a5e',roughness:.55}),
+  rugLiving:M({map:TX.rugLiving,roughness:1,bumpMap:TX.fabric,bumpScale:1}),
+  rugBed:M({map:TX.rugBed,roughness:1,bumpMap:TX.fabric,bumpScale:1}),
+  rugKids:M({map:TX.rugKids,roughness:1,bumpMap:TX.fabric,bumpScale:1}),
+  paintSage:M({color:'#c3c8b3',roughness:.92}), paintClay:M({color:'#dcbfa8',roughness:.92}),
+  glass:M({color:'#c9d6dc',roughness:.03,transparent:true,opacity:.14,depthWrite:false}),
+  glassShower:M({color:'#e5eef0',roughness:.03,transparent:true,opacity:.18,depthWrite:false}),
+  doorGlass:M({color:'#2d3438',roughness:.05,metalness:.2,transparent:true,opacity:.55,depthWrite:false}),
+  mirror:M({color:'#dfe4e6',roughness:.02,metalness:1}),
+  tv:M({color:'#050505',roughness:.12,metalness:.3}),
+  sheer:M({color:'#fbf8f2',roughness:1,transparent:true,opacity:.55,side:T.DoubleSide,depthWrite:false}),
+  leaf:M({color:'#4f6b3b',roughness:.75,side:T.DoubleSide}), leafDark:M({color:'#3c5a2e',roughness:.8}),
+  pot:M({color:'#d9d3c9',roughness:.85}), potDark:M({color:'#3b3834',roughness:.7}),
+  rattan:M({map:TX.rattan,alphaTest:.5,side:T.DoubleSide,roughness:.75,color:'#ffffff'}),
+  grass:M({map:TX.grass,roughness:1}), concrete:M({map:TX.concrete,roughness:.85}),
+  road:M({color:'#44464a',roughness:.95}), paving:M({color:'#a0674a',roughness:.85}), roof:M({color:'#6f4b36',roughness:.85}),
+  books:[M({color:'#a44b2e',roughness:.8}),M({color:'#2f4a5a',roughness:.8}),M({color:'#d6c7a8',roughness:.8}),M({color:'#5f6b48',roughness:.8})],
+  carPaint:MP({color:'#1f4a8f',roughness:.32,metalness:.55,clearcoat:1,clearcoatRoughness:.03}),
+  roundel:M({map:TX.roundel,roughness:.25,metalness:.2}),
+  carGlass:MP({color:'#0c1014',roughness:.03,metalness:.4,clearcoat:1,clearcoatRoughness:.02}),
+  carTrim:M({color:'#18191a',roughness:.4,metalness:.3}),
+  chrome:M({color:'#dadada',roughness:.08,metalness:1}),
+  tyre:M({color:'#1c1c1c',roughness:.88}),
+  alloy:M({color:'#b5b8bb',roughness:.2,metalness:1}), alloyDark:M({color:'#2e3033',roughness:.35,metalness:.8}),
+  brake:M({color:'#70737a',roughness:.45,metalness:.9}),
+  plate:M({map:TX.plate,roughness:.5}),
+};
+const glowMats=[];
+function G(color,int){const m=new T.MeshStandardMaterial({color:'#222',emissive:color,emissiveIntensity:int,roughness:.5});m.userData.base=int;glowMats.push(m);return m;}
+const GLOW={down:G('#ffd9a8',6),led:G('#ffcf92',5),opal:G('#ffd6a0',3.2),ledCool:G('#fff1dc',4),ring:G('#ffdcb0',5),ext:G('#ffc98a',8),
+  head:G('#eef4ff',6),tail:G('#ff2412',5),fairy:G('#ffc070',9),display:G('#9fd8ff',3)};
+
+function worldUV(geo,scale,ox,oy,oz){
+  const p=geo.attributes.position,n=geo.attributes.normal,uv=geo.attributes.uv;
+  for(let i=0;i<p.count;i++){const x=p.getX(i)+ox,y=p.getY(i)+oy,z=p.getZ(i)+oz,nx=Math.abs(n.getX(i)),ny=Math.abs(n.getY(i)),nz=Math.abs(n.getZ(i));
+    let u,v;if(ny>=nx&&ny>=nz){u=x;v=-z;}else if(nx>=nz){u=z;v=y;}else{u=x;v=y;}uv.setXY(i,u/scale,v/scale);}
+  uv.needsUpdate=true;
+}
+const root=new T.Group();scene.add(root);
+const ceilingGroup=new T.Group();scene.add(ceilingGroup);
+const solids=[];
+function B(x0,y0,z0,x1,y1,z1,mat,o={}){
+  const w=Math.abs(x1-x0),h=Math.abs(y1-y0),d=Math.abs(z1-z0);if(w<1e-4||h<1e-4||d<1e-4)return null;
+  const cx=(x0+x1)/2,cy=(y0+y1)/2,cz=(z0+z1)/2,geo=new T.BoxGeometry(w,h,d);
+  if(o.uv)worldUV(geo,o.uv,cx,cy,cz);
+  const m=new T.Mesh(geo,mat);m.position.set(cx,cy,cz);m.castShadow=o.cast!==false;m.receiveShadow=o.recv!==false;
+  (o.parent||root).add(m);if(o.solid)solids.push([Math.min(x0,x1),Math.min(z0,z1),Math.max(x0,x1),Math.max(z0,z1)]);return m;
+}
+const rgCache={};
+function rboxGeo(w,h,d,r){
+  const key=[w,h,d,r].map(v=>v.toFixed(3)).join('_');if(rgCache[key])return rgCache[key];
+  r=Math.min(r,w/2-.002,h/2-.002,d/2-.002);const iw=w-2*r,ih=h-2*r,rr=Math.min(r*.6,iw/2-.001,ih/2-.001);
+  const s=new T.Shape(),x=-iw/2,y=-ih/2;
+  s.moveTo(x+rr,y);s.lineTo(x+iw-rr,y);s.quadraticCurveTo(x+iw,y,x+iw,y+rr);s.lineTo(x+iw,y+ih-rr);s.quadraticCurveTo(x+iw,y+ih,x+iw-rr,y+ih);
+  s.lineTo(x+rr,y+ih);s.quadraticCurveTo(x,y+ih,x,y+ih-rr);s.lineTo(x,y+rr);s.quadraticCurveTo(x,y,x+rr,y);
+  const g=new T.ExtrudeGeometry(s,{depth:Math.max(d-2*r,.001),bevelEnabled:true,bevelThickness:r,bevelSize:r,bevelSegments:3,curveSegments:4});
+  g.center();g.computeVertexNormals();rgCache[key]=g;return g;
+}
+function R(cx,cy,cz,w,h,d,r,mat,o={}){const m=new T.Mesh(rboxGeo(w,h,d,r),mat);m.position.set(cx,cy,cz);if(o.ry)m.rotation.y=o.ry;if(o.rx)m.rotation.x=o.rx;
+  m.castShadow=o.cast!==false;m.receiveShadow=true;(o.parent||root).add(m);return m;}
+function C(cx,y0,cz,rt,rb,h,mat,o={}){const m=new T.Mesh(new T.CylinderGeometry(rt,rb,h,o.seg||32),mat);m.position.set(cx,y0+h/2,cz);m.castShadow=o.cast!==false;m.receiveShadow=true;(o.parent||root).add(m);return m;}
+function Sph(cx,cy,cz,r,mat,sx=1,sy=1,sz=1,o={}){const m=new T.Mesh(new T.SphereGeometry(r,24,16),mat);m.position.set(cx,cy,cz);m.scale.set(sx,sy,sz);m.castShadow=o.cast!==false;m.receiveShadow=true;(o.parent||root).add(m);return m;}
+function floorRect(x0,z0,x1,z1,mat,scale,y=0){const g=new T.PlaneGeometry(x1-x0,z1-z0);g.rotateX(-PI/2);const cx=(x0+x1)/2,cz=(z0+z1)/2;worldUV(g,scale,cx,y,cz);
+  const m=new T.Mesh(g,mat);m.position.set(cx,y,cz);m.receiveShadow=true;root.add(m);return m;}
+function ceilRect(x0,z0,x1,z1){const g=new T.PlaneGeometry(x1-x0,z1-z0);g.rotateX(PI/2);const m=new T.Mesh(g,MAT.ceil);m.position.set((x0+x1)/2,H,(z0+z1)/2);m.receiveShadow=true;m.castShadow=true;ceilingGroup.add(m);return m;}
+const blobMat=new T.MeshBasicMaterial({color:0x000000,transparent:true,alphaMap:TX.blob,opacity:.45,depthWrite:false});
+function blob(cx,cz,w,d,op=.45,y=.004){const m=new T.Mesh(new T.PlaneGeometry(w,d),op===.45?blobMat:blobMat.clone());if(op!==.45)m.material.opacity=op;m.rotation.x=-PI/2;m.position.set(cx,y,cz);m.renderOrder=1;root.add(m);return m;}
+const aoMat=new T.MeshBasicMaterial({color:0x000000,transparent:true,alphaMap:TX.grad,opacity:.28,depthWrite:false});
+const aoMatC=new T.MeshBasicMaterial({color:0x000000,transparent:true,alphaMap:TX.grad,opacity:.18,depthWrite:false});
+function aoEdges(x0,z0,x1,z1){
+  const edges=[[(x0+x1)/2,z0,x1-x0,0,1],[(x0+x1)/2,z1,x1-x0,0,-1],[x0,(z0+z1)/2,z1-z0,1,0],[x1,(z0+z1)/2,z1-z0,-1,0]];
+  for(const [ex,ez,L,ax,az] of edges){
+    const gF=new T.Group();gF.position.set(ex,.003,ez);gF.rotation.y=Math.atan2(-ax,-az);
+    const pf=new T.Mesh(new T.PlaneGeometry(L,.38),aoMat);pf.rotation.x=-PI/2;pf.position.z=-.19;gF.add(pf);root.add(gF);
+    const gC=new T.Group();gC.position.set(ex,H-.003,ez);gC.rotation.y=Math.atan2(ax,az);
+    const pc=new T.Mesh(new T.PlaneGeometry(L,.3),aoMatC);pc.rotation.x=PI/2;pc.position.z=.15;gC.add(pc);ceilingGroup.add(gC);}
+}
+// sima normálok (azonos pozíciójú csúcsok átlagolása) – íves felületekhez
+function smoothNormals(g){g.computeVertexNormals();const p=g.attributes.position,n=g.attributes.normal,map=new Map();
+  for(let i=0;i<p.count;i++){const k=Math.round(p.getX(i)*2000)+'_'+Math.round(p.getY(i)*2000)+'_'+Math.round(p.getZ(i)*2000);
+    let a=map.get(k);if(!a){a=[0,0,0,[]];map.set(k,a);}a[0]+=n.getX(i);a[1]+=n.getY(i);a[2]+=n.getZ(i);a[3].push(i);}
+  for(const a of map.values()){const l=Math.hypot(a[0],a[1],a[2])||1;for(const i of a[3])n.setXYZ(i,a[0]/l,a[1]/l,a[2]/l);}n.needsUpdate=true;return g;}
+
+// üreges 3D medence (kád, mosdó, mosogató): lekerekített perem + fal + fenék + lefolyó
+function rrShape(w,d,r,PathCls){const s=new PathCls(),x=-w/2,y=-d/2;r=Math.min(r,w/2-.001,d/2-.001);
+  s.moveTo(x+r,y);s.lineTo(x+w-r,y);s.quadraticCurveTo(x+w,y,x+w,y+r);s.lineTo(x+w,y+d-r);s.quadraticCurveTo(x+w,y+d,x+w-r,y+d);
+  s.lineTo(x+r,y+d);s.quadraticCurveTo(x,y+d,x,y+d-r);s.lineTo(x,y+r);s.quadraticCurveTo(x,y,x+r,y);return s;}
+function basin(cx,top,cz,w,d,h,t,r,mat,o={}){
+  const outer=rrShape(w,d,r,T.Shape);outer.holes.push(rrShape(w-2*t,d-2*t,Math.max(r-t,.006),T.Path));
+  const wg=new T.ExtrudeGeometry(outer,{depth:h,bevelEnabled:false,curveSegments:12});wg.rotateX(-PI/2);
+  const wm=new T.Mesh(wg,mat);wm.position.set(cx,top-h,cz);wm.castShadow=true;wm.receiveShadow=true;root.add(wm);
+  // lekerekített perem
+  const bg=new T.ExtrudeGeometry(rrShape(w-2*t+.004,d-2*t+.004,Math.max(r-t,.006),T.Shape),{depth:o.floor||t,bevelEnabled:false,curveSegments:12});bg.rotateX(-PI/2);
+  const bm=new T.Mesh(bg,mat);bm.position.set(cx,top-h,cz);bm.receiveShadow=true;root.add(bm);
+  const fl=top-h+(o.floor||t);
+  C(o.dx!==undefined?cx+o.dx:cx,fl,cz,.024,.024,.003,MAT.steel,{cast:false});
+  const ring=new T.Mesh(new T.TorusGeometry(.024,.004,6,20),MAT.steel);ring.rotation.x=PI/2;ring.position.set(o.dx!==undefined?cx+o.dx:cx,fl+.003,cz);root.add(ring);
+  return wm;}
+
+// kivágott munkalap: a mosogató / mosdó helyén valódi nyílás van
+function rrPath(cx,cy,w,d,r,P){const x=cx-w/2,y=cy-d/2;r=Math.min(r,w/2-.001,d/2-.001);
+  P.moveTo(x+r,y);P.lineTo(x+w-r,y);P.quadraticCurveTo(x+w,y,x+w,y+r);P.lineTo(x+w,y+d-r);P.quadraticCurveTo(x+w,y+d,x+w-r,y+d);
+  P.lineTo(x+r,y+d);P.quadraticCurveTo(x,y+d,x,y+d-r);P.lineTo(x,y+r);P.quadraticCurveTo(x,y,x+r,y);return P;}
+function cutTop(x0,z0,x1,z1,y0,y1,holes,mat,uvS=1){const s=new T.Shape();s.moveTo(x0,-z0);s.lineTo(x1,-z0);s.lineTo(x1,-z1);s.lineTo(x0,-z1);s.closePath();
+  for(const h of holes)s.holes.push(rrPath(h[0],-h[1],h[2],h[3],h[4]||.03,new T.Path()));
+  const g=new T.ExtrudeGeometry(s,{depth:y1-y0,bevelEnabled:false,curveSegments:10});g.rotateX(-PI/2);
+  const p=g.attributes.position,uv=g.attributes.uv,n=g.attributes.normal;g.computeVertexNormals();
+  for(let i=0;i<p.count;i++){const ny=Math.abs(n.getY(i)),nx=Math.abs(n.getX(i));uv.setXY(i,(ny>.5?p.getX(i):(nx>.5?p.getZ(i):p.getX(i)))/uvS,(ny>.5?p.getZ(i):p.getY(i)*4)/uvS);}
+  const m=new T.Mesh(g,mat);m.position.y=y0;m.castShadow=m.receiveShadow=true;root.add(m);return m;}
+// pultra ültetett (ráültetett) mosdótál – esztergált profil, valódi belső üreggel
+function vessel(cx,y,cz,rx,rz,h,mat=MAT.ceramic){const t=.012,tn=t/Math.min(rx,rz),tb=Math.min(.3,t*1.6/h),N=16,f=u=>.55+.45*Math.sin(u*PI/2);
+  const prof=[new T.Vector2(0,0)];for(let i=0;i<=N;i++){const u=i/N;prof.push(new T.Vector2(f(u),u));}
+  for(let i=N;i>=0;i--){const u=i/N;prof.push(new T.Vector2(Math.max(.001,f(u)-tn),tb+u*(1-tb)));}
+  prof.push(new T.Vector2(0,tb));
+  const g=new T.LatheGeometry(prof,64);g.computeVertexNormals();const m=new T.Mesh(g,mat);m.scale.set(rx,h,rz);m.position.set(cx,y,cz);
+  m.castShadow=m.receiveShadow=true;root.add(m);
+  C(cx,y+tb*h+.001,cz,.022,.022,.003,MAT.chrome,{cast:false});return m;}
+// alulról beépített mosogatótálca (rozsdamentes), a kivágott pult alatt
+function sinkBowl(cx,top,cz,w,d,h,mat=MAT.steel){const t=.008,y0=top-h;
+  B(cx-w/2,y0,cz-d/2,cx+w/2,y0+t,cz+d/2,mat);
+  B(cx-w/2-t,y0,cz-d/2-t,cx-w/2,top,cz+d/2+t,mat);B(cx+w/2,y0,cz-d/2-t,cx+w/2+t,top,cz+d/2+t,mat);
+  B(cx-w/2,y0,cz-d/2-t,cx+w/2,top,cz-d/2,mat);B(cx-w/2,y0,cz+d/2,cx+w/2,top,cz+d/2+t,mat);
+  C(cx,y0+t,cz,.04,.04,.003,MAT.chrome,{cast:false});const rg=new T.Mesh(new T.TorusGeometry(.04,.005,6,24),MAT.chrome);rg.rotation.x=PI/2;rg.position.set(cx,y0+t+.004,cz);root.add(rg);}
+// íves, egykaros csaptelep
+function tap(x,y,z,dirX,dirZ,reach=.2,hgt=.3,mat=MAT.chrome){C(x,y,z,.022,.026,.03,mat);
+  const pts=[[0,0],[0,hgt*.7],[reach*.25,hgt],[reach*.75,hgt],[reach,hgt*.78]].map(([a,b])=>new T.Vector3(x+dirX*a,y+.02+b,z+dirZ*a));
+  const tb=new T.Mesh(new T.TubeGeometry(new T.CatmullRomCurve3(pts),40,.011,10),mat);tb.castShadow=true;root.add(tb);
+  B(x-dirX*.06,y+.03,z-dirZ*.06,x+(dirZ?.006:0)-(dirZ?.012:0),y+.042,z+(dirX?.006:0)-(dirX?.012:0),mat);}
+
+// ---------------- LIGHTS ----------------
+const lamps=[];
+function addLamp(l,base){l.intensity=base;lamps.push({l,base});scene.add(l);if(l.target)scene.add(l.target);return l;}
+function spot(x,y,z,tx,ty,tz,int,angle,pen,shadow,color='#ffd2a0',dist=0){
+  const s=new T.SpotLight(color,int,dist,angle,pen,2);s.position.set(x,y,z);s.target.position.set(tx,ty,tz);
+  if(shadow){s.castShadow=true;s.shadow.mapSize.set(1024,1024);s.shadow.bias=-.0004;s.shadow.normalBias=.02;s.shadow.radius=4;s.shadow.camera.near=.1;s.shadow.camera.far=8;}
+  return addLamp(s,int);}
+function point(x,y,z,int,dist,color='#ffcf9a'){const p=new T.PointLight(color,int,dist,2);p.position.set(x,y,z);return addLamp(p,int);}
+function downlight(x,z,r=.045){const m=new T.Mesh(new T.CylinderGeometry(r,r,.012,24),GLOW.down);m.position.set(x,H-.004,z);ceilingGroup.add(m);
+  const ring=new T.Mesh(new T.TorusGeometry(r+.006,.006,6,24),MAT.black);ring.rotation.x=PI/2;ring.position.set(x,H-.004,z);ceilingGroup.add(ring);}
+
+// ---------------- ÚJ TEXTÚRÁK (homlokzat, tető, kert) ----------------
+function stuccoBump(){const S=512,c=cv(S,S),g=c.getContext('2d'),r=rng(91);g.fillStyle='#808080';g.fillRect(0,0,S,S);
+  for(let i=0;i<26000;i++){const v=(100+r()*110)|0;g.fillStyle=`rgba(${v},${v},${v},.55)`;g.fillRect(r()*S,r()*S,1+r()*2,1+r()*2);}return ctex(c,false);}
+function boardTex(base,n,seed,horizontal=true){const S=1024,c=cv(S,S),g=c.getContext('2d'),r=rng(seed),bh=S/n;
+  g.fillStyle=shade(base,-.18);g.fillRect(0,0,S,S);
+  for(let j=0;j<n;j++){const col=new T.Color(base).offsetHSL((r()-.5)*.015,(r()-.5)*.05,(r()-.5)*.07);
+    g.fillStyle='#'+col.getHexString();g.fillRect(0,j*bh+2,S,bh-4);
+    g.save();g.beginPath();g.rect(0,j*bh+2,S,bh-4);g.clip();
+    for(let k=0;k<26;k++){const yy=j*bh+r()*bh;g.strokeStyle=`rgba(${r()<.5?60:240},${r()<.5?40:215},20,${.05+r()*.08})`;g.lineWidth=.6+r()*1.8;
+      g.beginPath();const f=.004+r()*.012,a=1+r()*3,p=r()*6;for(let x=0;x<=S;x+=10)g.lineTo(x,yy+Math.sin(x*f+p)*a);g.stroke();}
+    const gr=g.createLinearGradient(0,j*bh,0,j*bh+bh);gr.addColorStop(0,'rgba(255,255,255,.08)');gr.addColorStop(1,'rgba(0,0,0,.12)');g.fillStyle=gr;g.fillRect(0,j*bh,S,bh);
+    g.restore();}
+  if(!horizontal){const c2=cv(S,S),g2=c2.getContext('2d');g2.translate(S/2,S/2);g2.rotate(PI/2);g2.drawImage(c,-S/2,-S/2);return ctex(c2);}
+  return ctex(c);}
+function brickTex(){const W=512,Hh=512,c=cv(W,Hh),g=c.getContext('2d'),r=rng(33),bw=W/4,bh=Hh/8;g.fillStyle='#b9b1a6';g.fillRect(0,0,W,Hh);
+  for(let j=0;j<8;j++)for(let i=-1;i<5;i++){const x=i*bw+(j%2)*bw/2,y=j*bh,col=new T.Color('#8d4f37').offsetHSL((r()-.5)*.03,(r()-.5)*.1,(r()-.5)*.12);
+    g.fillStyle='#'+col.getHexString();g.fillRect(x+3,y+3,bw-6,bh-6);for(let k=0;k<60;k++){g.fillStyle=`rgba(0,0,0,${r()*.12})`;g.fillRect(x+r()*bw,y+r()*bh,2,2);}}
+  return ctex(c);}
+function gravelTex(){const S=512,c=cv(S,S),g=c.getContext('2d'),r=rng(57);g.fillStyle='#cfccc5';g.fillRect(0,0,S,S);
+  for(let i=0;i<9000;i++){const v=170+r()*80|0,t=r()*12;g.fillStyle=`rgb(${v},${v-3|0},${v-10|0})`;g.beginPath();g.ellipse(r()*S,r()*S,1.5+r()*4,1+r()*3,r()*3,0,7);g.fill();
+    if(r()<.3){g.fillStyle='rgba(0,0,0,.18)';g.fillRect(r()*S,r()*S,2,2);}}
+  return ctex(c);}
+function paverTex(){const S=1024,c=cv(S,S),g=c.getContext('2d'),r=rng(63),bw=S/5,bh=S/10;g.fillStyle='#6d6862';g.fillRect(0,0,S,S);
+  for(let j=0;j<10;j++)for(let i=-1;i<6;i++){const x=i*bw+(j%2)*bw/2,y=j*bh,col=new T.Color(['#9c958c','#8a847d','#a8a097','#7e7871'][(r()*4)|0]).offsetHSL(0,0,(r()-.5)*.05);
+    g.fillStyle='#'+col.getHexString();g.fillRect(x+3,y+3,bw-6,bh-6);
+    for(let k=0;k<160;k++){g.fillStyle=`rgba(${r()<.5?0:255},${r()<.5?0:255},${r()<.5?0:255},${r()*.06})`;g.fillRect(x+r()*bw,y+r()*bh,2,2);}}
+  return ctex(c);}
+function fenceTex(){const S=512,c=cv(S,S),g=c.getContext('2d'),r=rng(71);g.fillStyle='#bdb8b0';g.fillRect(0,0,S,S);
+  for(let j=0;j<4;j++){const y=j*S/4;for(let k=0;k<180;k++){const w=20+r()*70;const col=new T.Color('#c4bfb6').offsetHSL(0,0,(r()-.5)*.08);g.fillStyle='#'+col.getHexString();
+      g.fillRect(r()*S,y+6+r()*(S/4-30),w,8+r()*14);}
+    g.fillStyle='rgba(0,0,0,.28)';g.fillRect(0,y,S,4);g.fillStyle='rgba(255,255,255,.25)';g.fillRect(0,y+4,S,2);}
+  for(let i=0;i<9000;i++){g.fillStyle=`rgba(0,0,0,${r()*.07})`;g.fillRect(r()*S,r()*S,1,1);}
+  return ctex(c);}
+function roofTileTex2(base){
+  const W=768,Hh=704,c=cv(W,Hh),g=c.getContext('2d'),b=cv(W,Hh),gb=b.getContext('2d'),r=rng(61);
+  const cols=4,rows=4,tw=W/cols,th=Hh/rows;
+  g.fillStyle='#1d1b1a';g.fillRect(0,0,W,Hh);gb.fillStyle='#000';gb.fillRect(0,0,W,Hh);
+  for(let j=0;j<rows;j++){const off=(j%2)*tw/2,y=j*th;
+    for(let i=-1;i<=cols;i++){const x=i*tw+off;
+      const bc=new T.Color(base).offsetHSL((r()-.5)*.01,(r()-.5)*.04,(r()-.5)*.05);
+      const grd=g.createLinearGradient(0,y,0,y+th);
+      grd.addColorStop(0,'#'+bc.clone().offsetHSL(0,0,-.08).getHexString());grd.addColorStop(.4,'#'+bc.getHexString());
+      grd.addColorStop(.92,'#'+bc.clone().offsetHSL(0,0,.04).getHexString());grd.addColorStop(1,'#'+bc.clone().offsetHSL(0,0,-.08).getHexString());
+      g.fillStyle=grd;g.fillRect(x+2,y,tw-4,th-3);
+      for(let k=0;k<300;k++){g.fillStyle=`rgba(${r()<.5?20:230},${r()<.5?20:225},${r()<.5?20:215},${r()*.06})`;g.fillRect(x+r()*tw,y+r()*th,1+r()*3,1+r()*2);}
+      const bg=gb.createLinearGradient(0,y,0,y+th);bg.addColorStop(0,'#303030');bg.addColorStop(.85,'#c8c8c8');bg.addColorStop(1,'#e8e8e8');
+      gb.fillStyle=bg;gb.fillRect(x+2,y,tw-4,th-3);}
+    const sh=g.createLinearGradient(0,y,0,y+18);sh.addColorStop(0,'rgba(0,0,0,.5)');sh.addColorStop(1,'rgba(0,0,0,0)');g.fillStyle=sh;g.fillRect(0,y,W,18);}
+  return {map:ctex(c),bump:ctex(b,false)};}
+Object.assign(TX,{
+  stucco:stuccoBump(),
+  bigTile:travertineTex({cols:2,rows:4,base:'#e7e2da',grout:'#cfc8bd',vary:.025,veins:9,seed:44}),
+  wetTile:travertineTex({cols:2,rows:4,base:'#dcd6cd',grout:'#c4bcb0',vary:.02,veins:7,seed:46}),
+  wetWall:travertineTex({cols:2,rows:4,base:'#cbbfae',grout:'#b3a796',vary:.03,veins:6,seed:47}),
+  accentWall:travertineTex({cols:4,rows:8,base:'#b9ae9f',grout:'#a3998b',vary:.04,veins:6,seed:48}),
+  cladding:boardTex('#9c6a43',10,5), deck:boardTex('#a77a52',16,6,false), slats:woodTex('#cfae86',true,23),
+  brick:brickTex(), gravel:gravelTex(), paver:paverTex(), fence:fenceTex(), roofTile:roofTileTex2('#4a4440'),
+});
+Object.assign(MAT,{
+  wall:M({color:'#f4f2ee',roughness:.93}), ceil:M({color:'#fafaf8',roughness:.95}),
+  extWall:M({color:'#f2f0eb',roughness:.96,bumpMap:TX.stucco,bumpScale:.6}),
+  plinth:M({color:'#6f6b66',roughness:.9}),
+  frame:M({color:'#2a2c2e',roughness:.45,metalness:.25}),
+  frameIn:M({color:'#33363a',roughness:.5,metalness:.2}),
+  alu:M({color:'#3a3d40',roughness:.4,metalness:.6}),
+  entryDoor:M({color:'#3b3e42',roughness:.42,metalness:.15}),
+  bigTile:M({map:TX.bigTile,roughness:.28}), wetTile:M({map:TX.wetTile,roughness:.35}), wetWall:M({map:TX.wetWall,roughness:.5}),
+  accentWall:M({map:TX.accentWall,roughness:.4}),
+  oakLight:M({map:TX.oak,color:'#fff4e6',roughness:.5}),
+  cladding:M({map:TX.cladding,roughness:.7}), soffit:M({map:TX.cladding,color:'#e8cfb6',roughness:.7}),
+  deck:M({map:TX.deck,roughness:.75}), slats:M({map:TX.slats,roughness:.55}),
+  brick:M({map:TX.brick,roughness:.9}), gravel:M({map:TX.gravel,color:'#d9d5cc',roughness:1}), paver:M({map:TX.paver,roughness:.9}),
+  fence:M({map:TX.fence,roughness:.95}), fenceCap:M({color:'#a9a49b',roughness:.9}),
+  tile:M({map:TX.roofTile.map,bumpMap:TX.roofTile.bump,bumpScale:2,roughness:.7,side:T.DoubleSide}),
+  ridge:M({color:'#3b3633',roughness:.6}), trim:M({color:'#2f2c2a',roughness:.55}), gutter:M({color:'#33302e',roughness:.35,metalness:.6}),
+  sofaFab:M({color:'#b39876',roughness:1,bumpMap:TX.fabric,bumpScale:.6}), beigeFab:M({color:'#a88d6b',roughness:1,bumpMap:TX.fabric,bumpScale:1.0}),
+  boucle:M({color:'#efe9df',roughness:1,bumpMap:TX.fabric,bumpScale:1.2}),
+  walnut:M({map:TX.darkWood,color:'#b8916f',roughness:.5}),
+  sidewalk:M({map:TX.concrete,color:'#d9d6d0',roughness:.9}), curb:M({color:'#b9b6b0',roughness:.85}),
+  grassBlade:M({color:'#9aa86a',roughness:.9,side:T.DoubleSide}), grassBlade2:M({color:'#c2b37a',roughness:.9,side:T.DoubleSide}),
+  boxwood:M({color:'#3f6a2c',roughness:.9}),
+  glassDark:M({color:'#2a3338',roughness:.04,metalness:.3,transparent:true,opacity:.6,depthWrite:false}),
+});
+MAT.floorTile=MAT.bigTile;
+// meleg, kicsit sötétebb greige nagyformátumú lap a közös terekbe
+TX.warmTile=travertineTex({cols:2,rows:4,base:'#b4a48d',grout:'#9d8f7b',vary:.035,veins:8,seed:52});
+MAT.bigTile=M({map:TX.warmTile,roughness:.42});MAT.floorTile=MAT.bigTile;
+MAT.ceil=M({color:'#ffffff',roughness:.95,emissive:'#ffffff',emissiveIntensity:.3});
+MAT.beige=M({color:'#e4d3bb',roughness:.93});
+function veneerTex(base,seed,vertical=true){const S=1024,c=cv(S,S),g=c.getContext('2d'),r=rng(seed),col=new T.Color(base);
+  g.fillStyle=base;g.fillRect(0,0,S,S);
+  const lg=g.createLinearGradient(0,0,S,0);for(let i=0;i<=8;i++){const k=(r()-.5)*.03;lg.addColorStop(i/8,'#'+col.clone().offsetHSL(0,0,k).getHexString());}
+  g.fillStyle=lg;g.fillRect(0,0,S,S);
+  for(let k=0;k<70;k++){const x=r()*S,d=r()<.5,a=.025+r()*.045;g.strokeStyle='#'+col.clone().offsetHSL(0,0,d?-.1:.06).getHexString();g.globalAlpha=a;g.lineWidth=.6+r()*1.8;
+    g.beginPath();const f=.002+r()*.004,amp=3+r()*10,p=r()*6;for(let y=0;y<=S;y+=8)g.lineTo(x+Math.sin(y*f+p)*amp,y);g.stroke();}
+  g.globalAlpha=1;
+  if(!vertical){const c2=cv(S,S),g2=c2.getContext('2d');g2.translate(S/2,S/2);g2.rotate(PI/2);g2.drawImage(c,-S/2,-S/2);return ctex(c2);}
+  return ctex(c);}
+MAT.doorWood=M({map:veneerTex('#c9a47c',29),roughness:.5});
+MAT.walnutTop=M({map:veneerTex('#7e5a3c',77,false),roughness:.4});
+MAT.deskTop=M({map:veneerTex('#d2b48e',91,false),roughness:.5});
+MAT.vanity=M({map:veneerTex('#c39d74',93,false),roughness:.5});
+MAT.zellige=M({map:(()=>{const W=512,Hh=1024,c=cv(W,Hh),g=c.getContext('2d'),r=rng(58),cw=W/8,ch=Hh/4;g.fillStyle='#c2b2a2';g.fillRect(0,0,W,Hh);
+  for(let i=0;i<8;i++)for(let j=0;j<4;j++){const col=new T.Color('#9a7458');
+    const gr=g.createLinearGradient(i*cw,0,i*cw+cw,0);gr.addColorStop(0,'#'+col.getHexString());gr.addColorStop(1,'#'+col.getHexString());
+    g.fillStyle=gr;g.fillRect(i*cw+3,j*ch+3,cw-6,ch-6);}return ctex(c);})(),roughness:.3});
+// előtető oromzata: nagyformátumú, antracit beton-hatású porcelán lap (110×55 cm), finom fugával
+MAT.porch=M({map:(()=>{const S=1024,c=cv(S,S),g=c.getContext('2d'),r=rng(611),cw=S/2,ch=S/4;g.fillStyle='#2a2b2d';g.fillRect(0,0,S,S);
+  for(let j=0;j<4;j++)for(let i=-1;i<2;i++){const x=i*cw+(j%2)*cw/2,y=j*ch,col=new T.Color('#55575a').offsetHSL(0,0,(r()-.5)*.03);
+    g.fillStyle='#'+col.getHexString();g.fillRect(x+3,y+3,cw-6,ch-6);
+    for(let k=0;k<900;k++){const v=r();g.fillStyle=v<.5?'rgba(0,0,0,.05)':'rgba(255,255,255,.035)';g.fillRect(x+r()*cw,y+r()*ch,1+r()*3,1+r()*3);}
+}
+  return ctex(c);})(),roughness:.55,metalness:.05});
+// oszlopok: hűvös szürke-greige, vékony réteges palakő (ledgestone), a homlokzat antracit elemeihez illesztve
+{const W=512,Hh=1024,c=cv(W,Hh),g=c.getContext('2d'),b=cv(W,Hh),gb=b.getContext('2d'),r=rng(733);
+ g.fillStyle='#3b3a38';g.fillRect(0,0,W,Hh);gb.fillStyle='#000';gb.fillRect(0,0,W,Hh);
+ let y=0;while(y<Hh){const h=14+r()*26;let x=-r()*80;
+   while(x<W){const w=60+r()*180,pal=['#8d8a85','#a19d96','#76736e','#b3aea6','#6a6865','#9a9289'],col=new T.Color(pal[(r()*pal.length)|0]).offsetHSL(0,0,(r()-.5)*.05);
+     g.fillStyle='#'+col.getHexString();g.fillRect(x+2,y+2,w-3,h-3);
+     for(let k=0;k<w*h/40;k++){g.fillStyle=`rgba(${r()<.5?0:255},${r()<.5?0:255},${r()<.5?0:255},${r()*.07})`;g.fillRect(x+r()*w,y+r()*h,2,1);}
+     const gr=gb.createLinearGradient(0,y,0,y+h);const lv=120+r()*120|0;gr.addColorStop(0,`rgb(${lv},${lv},${lv})`);gr.addColorStop(1,`rgb(${lv*.6|0},${lv*.6|0},${lv*.6|0})`);
+     gb.fillStyle=gr;gb.fillRect(x+2,y+2,w-3,h-3);x+=w;}
+   y+=h;}
+ MAT.pillar=M({map:ctex(c),bumpMap:ctex(b,false),bumpScale:4,roughness:.85});}
+MAT.lamella=M({map:(()=>{const S=512,c=cv(S,S),g=c.getContext('2d'),n=8,h=S/n,r=rng(907);
+  for(let j=0;j<n;j++){const y=j*h,base=new T.Color('#4a4c4f');
+    const gr=g.createLinearGradient(0,y,0,y+h);gr.addColorStop(0,'#'+base.clone().offsetHSL(0,0,.07).getHexString());gr.addColorStop(.12,'#'+base.clone().offsetHSL(0,0,.03).getHexString());
+    gr.addColorStop(.85,'#'+base.getHexString());gr.addColorStop(1,'#'+base.clone().offsetHSL(0,0,-.04).getHexString());g.fillStyle=gr;g.fillRect(0,y,S,h);
+    for(let k=0;k<500;k++){g.fillStyle=`rgba(255,255,255,${r()*.025})`;g.fillRect(r()*S,y+r()*h,3+r()*10,1);}
+    g.fillStyle='#17181a';g.fillRect(0,y+h-7,S,7);g.fillStyle='rgba(0,0,0,.35)';g.fillRect(0,y,S,3);}
+  return ctex(c);})(),roughness:.45,metalness:.35});
+MAT.gableWood=M({map:boardTex('#6b4630',10,515),roughness:.6});
+MAT.chairFab=M({color:'#6a5040',roughness:1,bumpMap:TX.fabric,bumpScale:.8});
+// ---------------- FALAK, NYÍLÁSZÁRÓK ----------------
+const wallRects=[];   // a térképhez
+const doors=[];       // automatikusan nyíló ajtók (bejárati, terasz)
+function wall(x0,z0,x1,z1,ops=[],o={}){
+  const alongX=(x1-x0)>=(z1-z0);const a0=alongX?x0:z0,a1=alongX?x1:z1,t0=alongX?z0:x0,t1=alongX?z1:x1;
+  const yb=o.ext?GROUND:0,yt=o.h!==undefined?o.h:(o.ext?H+.25:H),mat=o.mat||(o.ext?MAT.extWall:MAT.wall);
+  wallRects.push([x0,z0,x1,z1]);
+  const seg=(a,b,y0,y1,solid)=>{if(b-a<1e-3||y1-y0<1e-3)return;if(alongX)B(a,y0,t0,b,y1,t1,mat,{solid,uv:o.uv});else B(t0,y0,a,t1,y1,b,mat,{solid,uv:o.uv});};
+  let cur=a0;ops.sort((p,q)=>p.a-q.a);
+  for(const op of ops){seg(cur,op.a,yb,yt,true);
+    const blocks=op.type==='win';
+    seg(op.a,op.b,yb,op.y0,blocks||op.y0>.3);seg(op.a,op.b,op.y1,yt,false);
+    if(blocks){if(alongX)solids.push([op.a,t0,op.b,t1]);else solids.push([t0,op.a,t1,op.b]);}
+    opening(alongX,t0,t1,op,o);cur=op.b;}
+  seg(cur,a1,yb,yt,true);
+}
+function Bw(alongX,a0,a1,y0,y1,t0,t1,mat,o){return alongX?B(a0,y0,Math.min(t0,t1),a1,y1,Math.max(t0,t1),mat,o):B(Math.min(t0,t1),y0,a0,Math.max(t0,t1),y1,a1,mat,o);}
+function sheerCurtain(alongX,a0,a1,t,y0,y1){
+  const w=a1-a0,g=new T.PlaneGeometry(w,y1-y0,Math.max(8,(w*24)|0),1),p=g.attributes.position;
+  for(let i=0;i<p.count;i++)p.setZ(i,Math.sin(p.getX(i)*26)*.035);g.computeVertexNormals();
+  const m=new T.Mesh(g,MAT.sheer);m.renderOrder=2;
+  if(alongX)m.position.set((a0+a1)/2,(y0+y1)/2,t);else{m.rotation.y=PI/2;m.position.set(t,(y0+y1)/2,(a0+a1)/2);}root.add(m);
+  // függönysín
+  if(alongX)B(a0,H-.05,t-.012,a1,H-.03,t+.012,MAT.frameIn,{cast:false});else B(t-.012,H-.05,a0,t+.012,H-.03,a1,MAT.frameIn,{cast:false});
+}
+// ajtószárny forgópánttal: a szárny zárt helyzetben a csuklóponttól 'dir' irányba nyúlik (helyi x), nyitáskor 'openDir' felé fordul
+function doorLeaf(alongX,hx,hz,len,dir,openDir,build,center){
+  const pv=new T.Group();pv.position.set(hx,0,hz);root.add(pv);
+  const inner=new T.Group();pv.add(inner);
+  // a szárny helyi x tengely mentén épül; a zárt irányba forgatjuk
+  const ang=d=>Math.atan2(-d[1],d[0]);           // rotation.y, amely a +x tengelyt d=(dx,dz) irányba viszi
+  const a0=ang(dir),a1=ang(openDir);let da=a1-a0;while(da>PI)da-=2*PI;while(da<-PI)da+=2*PI;
+  build(inner,len);pv.rotation.y=a0;
+  pv.traverse(m=>{if(m.isMesh){m.castShadow=true;m.receiveShadow=true;}});
+  doors.push({pv,a0,da,cx:center[0],cz:center[1],t:0});return pv;}
+function opening(alongX,t0,t1,op,o){
+  const tin=o.inside==='t0'?t0:t1,tout=o.inside==='t0'?t1:t0,dirIn=Math.sign(tin-tout)||1;
+  const {a,b,y0,y1}=op,f=.065;
+  const tm=(t0+t1)/2+(tout-tin)*.12,ft0=tm-.045,ft1=tm+.045;
+  const P=(u,t)=>alongX?[u,t]:[t,u];
+  if(op.type==='win'){
+    Bw(alongX,a,a+f,y0,y1,ft0,ft1,MAT.frame);Bw(alongX,b-f,b,y0,y1,ft0,ft1,MAT.frame);
+    Bw(alongX,a,b,y1-f,y1,ft0,ft1,MAT.frame);Bw(alongX,a,b,y0,y0+f,ft0,ft1,MAT.frame);
+    const w=b-a;const nSash=w>1.1?2:1;
+    for(let i=1;i<nSash;i++){const m=a+w*i/nSash;Bw(alongX,m-.04,m+.04,y0,y1,ft0,ft1,MAT.frame);}
+    // nyitható szárnyak belső kerete (kicsit beljebb), kilincs
+    for(let i=0;i<nSash;i++){const sa=a+f+i*(w-2*f)/nSash,sb=a+f+(i+1)*(w-2*f)/nSash,ti=tm+dirIn*.03;
+      Bw(alongX,sa,sb,y0+f,y0+f+.05,ti-.02,ti+.02,MAT.frame);Bw(alongX,sa,sb,y1-f-.05,y1-f,ti-.02,ti+.02,MAT.frame);
+      Bw(alongX,sa,sa+.05,y0+f,y1-f,ti-.02,ti+.02,MAT.frame);Bw(alongX,sb-.05,sb,y0+f,y1-f,ti-.02,ti+.02,MAT.frame);
+      const hu=i===0&&nSash===2?sb-.09:sb-.09,hy=(y0+y1)/2;Bw(alongX,hu-.012,hu+.012,hy-.09,hy+.03,ti+dirIn*.02,ti+dirIn*.045,MAT.steel,{cast:false});}
+    Bw(alongX,a+f,b-f,y0+f,y1-f,tm-.004,tm+.004,MAT.glass,{cast:false,recv:false});
+    const ts=tin+dirIn*.035;Bw(alongX,a-.03,b+.03,y0-.03,y0,Math.min(tm,ts),Math.max(tm,ts),MAT.quartz);
+    if(o.ext){const te=tout-dirIn*.05;Bw(alongX,a-.03,b+.03,y0-.05,y0-.01,Math.min(tm,te),Math.max(tm,te),MAT.alu);}   // külső ablakpárkány
+    if(op.curtain==='roman'){const tb=tin-dirIn*.05,lo=y1-.4;
+      Bw(alongX,a+.02,b-.02,lo,y1-.01,tb-.008,tb+.008,MAT.linen,{cast:false});
+      for(let k=0;k<3;k++){const yy=lo+k*.12;Bw(alongX,a+.02,b-.02,yy,yy+.035,tb-.02,tb+.02,MAT.linen);}}
+    else if(op.curtain!==false){const tc=tin+dirIn*.14;const cw=(b-a)*.33+.25;
+      sheerCurtain(alongX,a-.25,a-.25+cw,tc,.02,H-.06);sheerCurtain(alongX,b+.25-cw,b+.25,tc,.02,H-.06);}
+  }else if(op.type==='french'){
+    // kétszárnyú, befelé nyíló teraszajtó – a közeledő látogató előtt automatikusan kinyílik
+    Bw(alongX,a,a+f,0,y1,ft0,ft1,MAT.frame);Bw(alongX,b-f,b,0,y1,ft0,ft1,MAT.frame);Bw(alongX,a,b,y1-f,y1,ft0,ft1,MAT.frame);
+    Bw(alongX,a,b,0,.02,ft0-.02,ft1+.02,MAT.alu);
+    const half=(b-a-2*f)/2,tf=tm+dirIn*.045;
+    const leaf=(g,L)=>{const fw=.075,th=.07,yt=y1-f-.005;
+      B(0,.02,-th/2,fw,yt,th/2,MAT.frame,{parent:g});B(L-fw,.02,-th/2,L,yt,th/2,MAT.frame,{parent:g});
+      B(fw,.02,-th/2,L-fw,.17,th/2,MAT.frame,{parent:g});B(fw,yt-fw,-th/2,L-fw,yt,th/2,MAT.frame,{parent:g});
+      B(fw,.17,-.006,L-fw,yt-fw,.006,MAT.glass,{parent:g,cast:false,recv:false});
+      const hz=dirIn*(alongX?1:1);B(L-.11,1.0,-.06,L-.085,1.16,-.035,MAT.steel,{parent:g,cast:false});B(L-.11,1.0,.035,L-.085,1.16,.06,MAT.steel,{parent:g,cast:false});};
+    // a szárnyak belül, a fal belső síkja felé nyílnak
+    const inV=alongX?[0,dirIn]:[dirIn,0];
+    const da=alongX?[1,0]:[0,1],db=alongX?[-1,0]:[0,-1];
+    const [hxA,hzA]=P(a+f,tf),[hxB,hzB]=P(b-f,tf),[cx,cz]=P((a+b)/2,tin);
+    const mkLeaf=(g,L,flip)=>{const sub=new T.Group();g.add(sub);if(flip){sub.scale.z=-1;}leaf(sub,L);};
+    doorLeaf(alongX,hxA,hzA,half,da,inV,(g,L)=>mkLeaf(g,L,false),[cx,cz]);
+    doorLeaf(alongX,hxB,hzB,half,db,inV,(g,L)=>mkLeaf(g,L,true),[cx,cz]);
+    const te=tout-dirIn*.06;Bw(alongX,a-.05,b+.05,-.06,0,Math.min(tm,te),Math.max(tm,te),MAT.alu);
+  }else if(op.type==='entry2'){
+    // bejárati ajtó oldalsó üvegezéssel (a látványterv szerint): fix üvegmező + tömör fa szárny, hosszú fekete fogantyú
+    const sl=op.side===0?0:(op.side||.42);
+    Bw(alongX,a,a+f,0,y1,ft0,ft1,MAT.frame);Bw(alongX,b-f,b,0,y1,ft0,ft1,MAT.frame);Bw(alongX,a,b,y1-f,y1,ft0,ft1,MAT.frame);
+    Bw(alongX,a,b,0,.025,ft0-.03,ft1+.03,MAT.alu);
+    if(sl>0){Bw(alongX,a+sl-.03,a+sl+.03,0,y1,ft0,ft1,MAT.frame);Bw(alongX,a+f,a+sl-.03,.025,y1-f,tm-.005,tm+.005,MAT.glassDark,{cast:false,recv:false});}
+    const L=b-f-(sl>0?a+sl+.03:a+f)-.006,[hx,hz]=P(b-f-.003,tm),[cx,cz]=P((a+b)/2,(tin+tout)/2);
+    const inV=alongX?[0,dirIn]:[dirIn,0],cl=alongX?[-1,0]:[0,-1];
+    doorLeaf(alongX,hx,hz,L,cl,inV,(g,L)=>{B(0,.03,-.034,L,y1-f-.004,.034,MAT.entryDoor,{parent:g});
+      for(const u of [.2,.4,.6])B(L*u-.004,.25,.034,L*u+.004,y1-f-.25,.037,MAT.frame,{parent:g,cast:false});
+      for(const s of [-1,1]){B(L-.16,.55,s*.034,L-.13,1.85,s*.034+s*.035,MAT.blackMatte,{parent:g});
+        B(L-.16,.6,s*.034,L-.13,.64,s*.07,MAT.blackMatte,{parent:g});B(L-.16,1.76,s*.034,L-.13,1.8,s*.07,MAT.blackMatte,{parent:g});}
+      B(L-.1,1.0,-.04,L-.07,1.06,-.034,MAT.steel,{parent:g,cast:false});},[cx,cz]);
+  }else if(op.type==='door'||op.type==='pass'){
+    const cm=MAT.doorWood;
+    Bw(alongX,a,a+.03,0,y1,t0-.012,t1+.012,cm);Bw(alongX,b-.03,b,0,y1,t0-.012,t1+.012,cm);Bw(alongX,a,b,y1-.03,y1,t0-.012,t1+.012,cm);
+    for(const tt of [t0-.012,t1+.012]){const s=Math.sign(tt-(t0+t1)/2)*.012;
+      Bw(alongX,a-.06,a,0,y1+.06,tt,tt+s,cm);Bw(alongX,b,b+.06,0,y1+.06,tt,tt+s,cm);
+      Bw(alongX,a-.06,b+.06,y1,y1+.06,tt,tt+s,cm);}
+    if(op.type==='pass')return;
+    const hingeA=op.hinge==='a',ha=hingeA?a+.035:b-.035,side=op.swing==='t0'?-1:1,w=(b-a)-.07;
+    const face=side>0?Math.max(t0,t1):Math.min(t0,t1);const lm=MAT.doorWood;
+    const aSign=hingeA?1:-1;
+    if(alongX){B(Math.min(ha,ha+aSign*.042),0.01,Math.min(face,face+side*w),Math.max(ha,ha+aSign*.042),y1-.035,Math.max(face,face+side*w),lm);
+      B(Math.min(ha+aSign*.042,ha+aSign*.09),1.0,Math.min(face+side*(w-.08),face+side*(w-.2)),Math.max(ha+aSign*.042,ha+aSign*.09),1.03,Math.max(face+side*(w-.08),face+side*(w-.2)),MAT.black);}
+    else{B(Math.min(face,face+side*w),0.01,Math.min(ha,ha+aSign*.042),Math.max(face,face+side*w),y1-.035,Math.max(ha,ha+aSign*.042),lm);
+      B(Math.min(face+side*(w-.08),face+side*(w-.2)),1.0,Math.min(ha+aSign*.042,ha+aSign*.09),Math.max(face+side*(w-.08),face+side*(w-.2)),1.03,Math.max(ha+aSign*.042,ha+aSign*.09),MAT.black);}
+  }
+}
+
+// ======================================================================
+//  FÖLDSZINTI ALAPRAJZ (M 1:100) – méterben
+//  x: kelet felé, z: dél felé (az utca felé); origó: az ÉNy-i szerkezeti falsarok
+//  külső fal: 30 cm Porotherm + 12 cm EPS hőszigetelés, belső válaszfal: 10 cm
+//  MÓDOSÍTÁS: a 10-es (gardrób) helyiség északi fala 50 cm-rel északabbra került
+//  (z 4,50 → 4,00), a helyiség ajtaja változatlan helyen maradt → 8,04 m²
+// ======================================================================
+const EPS=.12;
+// ---- külső falak ----
+wall(-EPS,-EPS,14.30+EPS,.30,[
+  {a:1.50,b:2.70,y0:.90,y1:2.40,type:'win',curtain:'roman'},         // 08 szoba
+  {a:5.10,b:6.00,y0:1.80,y1:2.40,type:'win',curtain:false},           // 07 fürdő
+  {a:7.15,b:8.05,y0:1.80,y1:2.40,type:'win',curtain:false},           // 06 háztartási
+  {a:9.20,b:9.80,y0:1.80,y1:2.40,type:'win',curtain:false}],          // 05 kamra
+  {ext:true,inside:'t1'});
+wall(-EPS,.30,.30,7.20+EPS,[],{ext:true,inside:'t1'});                 // nyugati (telekhatár felőli) fal
+wall(14.30,.30,14.30+EPS+.30,7.20+EPS,[
+  {a:1.05,b:2.25,y0:.90,y1:2.40,type:'win',curtain:false},                          // konyha
+  {a:3.00,b:4.50,y0:0,y1:2.40,type:'french'},                         // teraszajtó 150/240
+  {a:5.10,b:6.60,y0:.90,y1:2.40,type:'win',curtain:'roman'}],                         // nappali
+  {ext:true,inside:'t0'});
+wall(.30,7.20,3.90,7.20+.30+EPS,[{a:1.50,b:2.70,y0:.90,y1:2.40,type:'win',curtain:'roman'}],{ext:true,inside:'t0'});   // 09 szoba
+wall(3.90-EPS,7.20+.30+EPS,4.20,8.10,[],{ext:true,inside:'t1'});
+wall(3.90-EPS,7.80,9.60+EPS,8.10+EPS,[
+  {a:4.77,b:5.97,y0:.90,y1:2.40,type:'win',curtain:'roman'},                          // 10 szoba (volt gardrób)
+  {a:6.80,b:7.80,y0:0,y1:2.40,type:'entry2',side:0},                  // bejárati ajtó 100/240 (alaprajz szerint)
+  {a:8.63,b:9.23,y0:1.50,y1:2.10,type:'win',curtain:false}],          // WC
+  {ext:true,inside:'t0'});
+wall(9.30,7.20+.30+EPS,9.60+EPS,7.80,[],{ext:true,inside:'t0'});
+wall(9.30,7.20,14.30+EPS+.30,7.50+EPS,[{a:11.10,b:12.60,y0:.90,y1:2.40,type:'win',curtain:'roman'}],{ext:true,inside:'t0'});
+// a terasz északi, takaró fala (a főfal folytatása)
+wall(14.72,-EPS,18.34,.30,[],{ext:true,h:2.55});
+// ---- belső falak ----
+wall(3.90,.30,4.20,7.20,[
+  {a:3.00,b:4.00,y0:0,y1:2.10,type:'door',hinge:'b',swing:'t0'},     // 08 szoba ajtaja
+  {a:4.10,b:5.05,y0:0,y1:2.10,type:'door',hinge:'a',swing:'t0'}]);   // 09 szoba ajtaja
+wall(2.70,4.00,3.90,4.10);                                             // 09 előterének északi fala
+wall(2.70,4.10,2.80,4.70);
+wall(.30,4.60,2.80,4.70);                                              // 08 beépített szekrény / 09 között
+wall(4.20,2.70,10.94,3.00,[
+  {a:4.40,b:5.15,y0:0,y1:2.10,type:'door',hinge:'a',swing:'t0'},     // fürdő 75/210
+  {a:6.62,b:7.37,y0:0,y1:2.10,type:'door',hinge:'a',swing:'t0'}]);   // háztartási 75/210
+wall(6.40,.30,6.50,2.70);wall(8.70,.30,8.80,2.70);
+wall(10.20,.30,10.30,2.70,[{a:1.85,b:2.61,y0:0,y1:2.10,type:'door',hinge:'b',swing:'t0'}]);   // kamra 76/210
+// 10 (volt gardrób) – új északi fal z=4,00-n
+wall(5.22,4.00,6.80,4.10);
+wall(5.22,4.10,5.30,5.10);
+wall(4.20,5.10,5.30,5.20,[{a:4.24,b:5.21,y0:0,y1:2.10,type:'door',hinge:'a',swing:'t1'}]);    // ajtó – változatlan helyen
+wall(6.70,4.10,6.80,7.80);
+// előtér – WC
+wall(8.30,4.50,8.40,7.80,[{a:4.70,b:5.45,y0:0,y1:2.10,type:'door',hinge:'a',swing:'t1'}]);    // WC 75/210
+wall(7.85,5.50,8.30,5.60);                                             // a szekrényfülke északi falcsonkja
+wall(8.40,4.50,9.40,4.60);wall(9.30,4.60,9.40,7.20);
+// kémény (LEIER LSK 18)
+B(8.15,0,3.00,8.60,H,3.45,MAT.wall,{solid:true});wallRects.push([8.15,3.00,8.60,3.45]);
+const ROOMS=[
+ {n:'Nappali – konyha – étkező',k:'Nappali',r:[[9.40,3.00,14.30,7.20],[10.30,.30,14.30,3.00]],f:'bigTile',s:[10.3,7.0,-.7]},
+ {n:'Közlekedő',k:'Közlekedő',r:[[4.20,3.00,9.40,4.00],[4.20,4.00,5.22,5.10],[6.80,4.00,9.40,4.50]],f:'bigTile',s:[9.1,3.6,PI/2]},
+ {n:'Előtér',k:'Előtér',r:[[6.80,4.50,8.30,7.80]],f:'bigTile',s:[7.55,7.35,0]},
+ {n:'WC',k:'WC',r:[[8.40,4.60,9.30,7.80]],f:'bigTile',s:[8.85,5.0,PI]},
+ {n:'Fürdőszoba',k:'Fürdő',r:[[4.20,.30,6.40,2.70]],f:'bigTile',s:[4.75,2.4,-.6]},
+ {n:'Háztartási helyiség',k:'Háztartási',r:[[6.50,.30,8.70,2.70]],f:'bigTile',s:[7.0,2.45,-.4]},
+ {n:'Kamra',k:'Kamra',r:[[8.80,.30,10.20,2.70]],f:'bigTile',s:[9.8,2.45,.4]},
+ {n:'08 – hálószoba (14,76 m²)',k:'08 hálószoba',r:[[.30,.30,3.90,4.00],[.30,4.00,2.70,4.60]],f:'oak',s:[3.45,3.65,.85]},
+ {n:'09 – szoba (9,66 m²)',k:'09 szoba',r:[[.30,4.70,3.90,7.20],[2.80,4.10,3.90,4.70]],f:'oak',s:[3.35,4.5,2.6]},
+ {n:'10 – szoba, volt gardrób (8,04 m²)',k:'10 szoba',r:[[5.30,4.10,6.70,7.80],[4.20,5.20,5.30,7.80]],f:'oak',s:[4.75,5.5,-2.6]},
+ {n:'Terasz – pergola',k:'Terasz',r:[[14.72,.30,18.22,4.66]],f:null,s:[16.2,4.42,.34],out:true},
+ {n:'Bejárat',k:'Bejárat',r:[[5.90,8.22,9.20,9.70]],f:null,s:[7.55,9.5,0],out:true},
+ {n:'Utca – Hrsz. 556/2',k:'Utcakép',r:[[-6,12.0,40,30]],f:null,s:[3.0,15.2,-.32],out:true},
+ {n:'Kert',k:'Kert',r:[[-.9,-6.1,30,12.0]],f:null,s:[24.0,-3.4,2.0],out:true},
+];
+for(const rm of ROOMS){if(!rm.f)continue;for(const r of rm.r){
+  floorRect(r[0],r[1],r[2],r[3],MAT[rm.f],rm.f==='oak'?2.4:2.4);ceilRect(r[0],r[1],r[2],r[3]);aoEdges(r[0],r[1],r[2],r[3]);}}
+floorRect(-EPS,-EPS,9.72,8.22,MAT.bigTile,2.4,-.012);floorRect(9.72,-EPS,14.72,7.62,MAT.bigTile,2.4,-.012);
+// lábazat (sötét, kopásálló vakolat) a homlokzat alján
+{const pl=MAT.plinth,d=.015;
+ B(-EPS-d,GROUND,-EPS-d,14.72+d,.05,-EPS,pl,{cast:false});B(-EPS-d,GROUND,-EPS,-EPS,.05,7.62+d,pl,{cast:false});
+ B(14.72,GROUND,-EPS,14.72+d,.05,7.62+d,pl,{cast:false});B(-EPS,GROUND,7.62,3.78,.05,7.62+d,pl,{cast:false});
+ B(3.78-d,GROUND,7.62,3.78,.05,8.22+d,pl,{cast:false});B(3.78,GROUND,8.22,9.72,.05,8.22+d,pl,{cast:false});
+ B(9.72,GROUND,7.62,9.72+d,.05,8.22+d,pl,{cast:false});B(9.72,GROUND,7.62,14.72,.05,7.62+d,pl,{cast:false});}
+
+function plant(x,z,s=1,y=0,potMat=MAT.pot){const ph=.5*s;C(x,y,z,.22*s,.16*s,ph,potMat);
+  const r=rng((x*100+z*10)|0);for(let i=0;i<14;i++){const a=r()*PI*2,rr=r()*.22*s,hh=ph+.25*s+r()*.9*s;
+    const lf=Sph(x+Math.cos(a)*rr,y+hh,z+Math.sin(a)*rr,.16*s,MAT.leaf,1.3,.35,.6);lf.rotation.set(r()*.8,a,r()*.8-.4);}
+  C(x,y+ph,z,.015*s,.02*s,.9*s,MAT.trunk);}
+const TREE_LEAF=['#35591f','#46702b','#58853a','#6d9a48'].map(c=>M({color:c,roughness:.85}));
+const LEAF_COL=['#3b6622','#4b7a2b','#5a8a33','#6b973c','#7e9f40'].map(c=>new T.Color(c));
+let leafTex,leafMat,treePts;
+function leafMaterial(){if(leafMat)return leafMat;const c=document.createElement('canvas');c.width=c.height=64;const g=c.getContext('2d');
+  g.beginPath();g.moveTo(32,2);g.bezierCurveTo(58,16,56,48,32,62);g.bezierCurveTo(8,48,6,16,32,2);g.fillStyle='#f4f4f4';g.fill();
+  g.strokeStyle='#bdbdbd';g.lineWidth=2;g.beginPath();g.moveTo(32,6);g.lineTo(32,60);for(let y=16;y<52;y+=10){g.moveTo(32,y+6);g.lineTo(18,y);g.moveTo(32,y+6);g.lineTo(46,y);}g.stroke();
+  leafTex=new T.CanvasTexture(c);leafTex.colorSpace=T.SRGBColorSpace;leafTex.anisotropy=MAXANI;
+  return leafMat=M({map:leafTex,emissiveMap:leafTex,emissive:'#16260f',alphaTest:.5,side:T.DoubleSide,roughness:.8});}
+const BARK=M({color:'#5c4a3a',roughness:1});
+function leafBlob(cx,cy,cz,rad,mat,ph){treePts.push([cx,cy,cz,rad]);rad*=.6;const g=new T.IcosahedronGeometry(rad,2),p=g.attributes.position;
+  for(let i=0;i<p.count;i++){const px=p.getX(i),py=p.getY(i),pz=p.getZ(i),k=1+.16*Math.sin(px*5/rad+ph)*Math.sin(py*6/rad+ph*2)*Math.sin(pz*5.5/rad+ph*3);p.setXYZ(i,px*k,py*k*.85,pz*k);}
+  g.computeVertexNormals();const m=new T.Mesh(g,mat);m.position.set(cx,cy,cz);m.castShadow=m.receiveShadow=true;root.add(m);}
+function branch(x0,y0,z0,x1,y1,z1,r0,r1){const d=new T.Vector3(x1-x0,y1-y0,z1-z0),L=d.length();
+  const m=new T.Mesh(new T.CylinderGeometry(r1,r0,L,8),BARK);m.position.set((x0+x1)/2,(y0+y1)/2,(z0+z1)/2);
+  m.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),d.normalize());m.castShadow=true;root.add(m);}
+function tree(x,z,s){const r=rng((x*31+z*7)|0),th=2.3*s;treePts=[];
+  C(x,GROUND,z,.1*s,.2*s,th,BARK,{seg:12});
+  Sph(x,GROUND+.06*s,z,.26*s,BARK,1,.35,1);
+  const n=6;for(let i=0;i<n;i++){const a=i/n*PI*2+r(),d=(.9+r()*.8)*s,hy=GROUND+th+(.5+r()*.9)*s,by=GROUND+th*(.6+r()*.25);
+    const bx=x+Math.cos(a)*d,bz=z+Math.sin(a)*d;
+    branch(x,by,z,bx,hy,bz,.07*s,.03*s);
+    for(let j=0;j<3;j++)leafBlob(bx+(r()-.5)*.9*s,hy+(r()-.3)*.8*s,bz+(r()-.5)*.9*s,(.65+r()*.45)*s,TREE_LEAF[(r()*4)|0],r()*6);}
+  for(let j=0;j<4;j++)leafBlob(x+(r()-.5)*.8*s,GROUND+th+(1.1+r()*.9)*s,z+(r()-.5)*.8*s,(.8+r()*.4)*s,TREE_LEAF[(r()*4)|0],r()*6);
+  const per=780,im=new T.InstancedMesh(new T.PlaneGeometry(.13*s,.17*s),leafMaterial(),treePts.length*per),o=new T.Object3D(),col=new T.Color();let k=0;
+  for(const [bx,by,bz,br] of treePts)for(let i=0;i<per;i++){
+    const u=r()*2-1,a=r()*PI*2,q=Math.sqrt(1-u*u),nx=q*Math.cos(a),ny=u,nz=q*Math.sin(a),d=br*(1.02-.65*r()*r());
+    o.position.set(bx+nx*d,by+ny*d*.9,bz+nz*d);o.lookAt(o.position.x+nx+(r()-.5),o.position.y+ny+(r()-.5),o.position.z+nz+(r()-.5));
+    o.rotateZ(r()*PI*2);o.scale.setScalar(.7+r()*.6);o.updateMatrix();im.setMatrixAt(k,o.matrix);
+    col.copy(LEAF_COL[(r()*5)|0]).multiplyScalar(.75+.4*(ny*.5+.5));im.setColorAt(k++,col);}
+  im.castShadow=true;root.add(im);}
+function bushLeaves(list,seed){const LS=b=>Math.max(.5,b[3]*.9),r=rng(seed),per=list.map(b=>Math.round(14*Math.cbrt(b[3]*b[4]*b[5])**2*2.2/(.0133*LS(b)**2))),im=new T.InstancedMesh(new T.PlaneGeometry(.1,.13),leafMaterial(),per.reduce((a,b)=>a+b,0)),o=new T.Object3D(),col=new T.Color();let k=0;
+  list.forEach(([bx,by,bz,rx,ry,rz],j)=>{Sph(bx,by,bz,rx*.55,TREE_LEAF[0],1,ry/rx,rz/rx);const ls=LS([bx,by,bz,rx]);
+    for(let i=0;i<per[j];i++){const u=r()*2-1,a=r()*PI*2,q=Math.sqrt(1-u*u),nx=q*Math.cos(a),ny=u,nz=q*Math.sin(a),d=.3+.72*Math.sqrt(r());
+      o.position.set(bx+nx*rx*d,by+ny*ry*d,bz+nz*rz*d);o.lookAt(o.position.x+nx+(r()-.5),o.position.y+ny+(r()-.5),o.position.z+nz+(r()-.5));
+      o.rotateZ(r()*PI*2);o.scale.setScalar(ls*(.7+r()*.6));o.updateMatrix();im.setMatrixAt(k,o.matrix);
+      col.copy(LEAF_COL[(r()*5)|0]).multiplyScalar((.45+.7*d)*(.8+.3*ny));im.setColorAt(k++,col);}});
+  im.castShadow=true;root.add(im);}
+const HEDGE_COL=['#2c5420','#376528','#437630','#52863a','#628f43'].map(c=>new T.Color(c));
+const HEDGE_CORE=M({color:'#16280f',roughness:1});
+// Lekerekített élű sövény: a doboz felszíni pontjait lekerekített dobozra vetítjük, hullámos felülettel.
+function hedge(x0,z0,x1,z1,H=1.8,W=.8){const dx0=x1-x0,dz0=z1-z0,L0=Math.hypot(dx0,dz0),ux=dx0/L0,uz=dz0/L0,
+    L=L0+W,cx=(x0+x1)/2,cz=(z0+z1)/2,ex=[ux,uz],ez=[-uz,ux],r=rng((x0*7+z1*13+99)|0),D=.18,R=.3,
+    a=L/2,b=(H+R)/2,c=W/2,hc=(H-R)/2,ph=r()*6;
+  const core=new T.Mesh(new T.BoxGeometry(2*(a-R+.08),2*(b-R+.08),2*(c-R+.08)),HEDGE_CORE);core.position.set(cx,GROUND+hc,cz);core.rotation.y=Math.atan2(-uz,ux);
+  core.castShadow=core.receiveShadow=true;root.add(core);
+  const aS=L*H,aT=L*W,aE=W*H,aAll=2*aS+aT+2*aE,N=Math.round(aAll*520),
+    im=new T.InstancedMesh(new T.PlaneGeometry(.085,.11),leafMaterial(),N),o=new T.Object3D(),col=new T.Color(),cl=(x,m)=>Math.max(-m,Math.min(m,x));
+  for(let k=0;k<N;k++){let f=r()*aAll,pu,pv,py;
+    if((f-=aS)<0){pv=c;pu=(r()-.5)*L;py=(r()-.5)*2*b;}
+    else if((f-=aS)<0){pv=-c;pu=(r()-.5)*L;py=(r()-.5)*2*b;}
+    else if((f-=aT)<0){py=b;pu=(r()-.5)*L;pv=(r()-.5)*W;}
+    else if((f-=aE)<0){pu=a;pv=(r()-.5)*W;py=(r()-.5)*2*b;}
+    else{pu=-a;pv=(r()-.5)*W;py=(r()-.5)*2*b;}
+    const qu=cl(pu,a-R),qy=cl(py,b-R),qv=cl(pv,c-R);let nu=pu-qu,ny=py-qy,nv=pv-qv;const len=Math.hypot(nu,ny,nv)||1;nu/=len;ny/=len;nv/=len;
+    const dep=D*Math.pow(r(),1.6),wave=.05*Math.sin(pu*2.1+py*1.6+ph)*Math.sin(pu*1.3+pv*2.7+ph*2)+.03*Math.sin(pu*5.3+py*4.1+ph*3),rad=R+wave-dep;
+    const u=qu+nu*rad,y=qy+ny*rad+hc,v=qv+nv*rad;
+    const wx=cx+ex[0]*u+ez[0]*v,wz=cz+ex[1]*u+ez[1]*v,wy=GROUND+y+.06*Math.sin(u*.8+ph)*Math.max(0,y/H),
+      nX=ex[0]*nu+ez[0]*nv,nZ=ex[1]*nu+ez[1]*nv;
+    o.position.set(wx,wy,wz);o.lookAt(wx+nX+(r()-.5)*1.4,wy+ny+(r()-.5)*1.4,wz+nZ+(r()-.5)*1.4);
+    o.rotateZ(r()*PI*2);o.scale.setScalar(.8+r()*.5);o.updateMatrix();im.setMatrixAt(k,o.matrix);
+    col.copy(HEDGE_COL[(r()*5)|0]).multiplyScalar((.5+.6*(1-dep/D))*(.85+.3*r()));im.setColorAt(k,col);}
+  im.castShadow=im.receiveShadow=true;root.add(im);}
+
+// ======================================================================
+//  BERENDEZÉS
+// ======================================================================
+// csoport, amely a helyi (x: hossz, z: mélység) koordinátákat a világba forgatja.
+// side: melyik irányba néz a bútor eleje / merre mutat a helyi +z ('n','s','e','w')
+function place(x0,z0,x1,z1,side){const g=new T.Group();root.add(g);let L,D;
+  if(side==='s'){g.position.set(x0,0,z0);g.rotation.y=0;L=x1-x0;D=z1-z0;}
+  else if(side==='n'){g.position.set(x1,0,z1);g.rotation.y=PI;L=x1-x0;D=z1-z0;}
+  else if(side==='e'){g.position.set(x0,0,z1);g.rotation.y=PI/2;L=z1-z0;D=x1-x0;}
+  else{g.position.set(x1,0,z0);g.rotation.y=-PI/2;L=z1-z0;D=x1-x0;}
+  return {g,L,D,o:{parent:g}};}
+// tolóajtós beépített szekrény (a helyi z=D oldalon a front)
+function slideWardrobe(x0,z0,x1,z1,side,h=H-.02){const {g,L,D,o}=place(x0,z0,x1,z1,side);
+  B(0,0,0,L,h,D-.03,MAT.white,o);B(.01,0,D-.03,L-.01,.06,D,MAT.greige,{parent:g,cast:false});
+  const n=Math.max(2,Math.round(L/.85)),pw=L/n;
+  for(let i=0;i<n;i++){const off=i%2?.0:.025,mat=i===1&&n>2?MAT.mirror:(i%2?MAT.vanity:MAT.white);
+    B(i*pw+.004,.06,D-.03+off,(i+1)*pw-.004,h-.04,D-.005+off,mat,{parent:g});
+    B(i*pw+.004,.06,D-.004+off,i*pw+.024,h-.04,D+.004+off,MAT.alu,{parent:g,cast:false});B((i+1)*pw-.024,.06,D-.004+off,(i+1)*pw-.004,h-.04,D+.004+off,MAT.alu,{parent:g,cast:false});}
+  B(0,h-.04,D-.04,L,h,D+.03,MAT.alu,{parent:g,cast:false});
+  solids.push([Math.min(x0,x1),Math.min(z0,z1),Math.max(x0,x1),Math.max(z0,z1)]);return g;}
+// ágy: fej a helyi x=0 végen, hossz L, szélesség D (a bútor "eleje" itt a lábvég)
+function bed(x0,z0,x1,z1,head,duvet,accent,headMat){const s={w:'s',e:'n',n:'w',s:'e'}[head];
+  // a place() helyi x tengelye a hosszabb oldal; fejvég mindig helyi x=0
+  const g=new T.Group();root.add(g);const o={parent:g};let L,W;
+  if(head==='w'){g.position.set(x0,0,z0);L=x1-x0;W=z1-z0;}
+  else if(head==='e'){g.position.set(x1,0,z1);g.rotation.y=PI;L=x1-x0;W=z1-z0;}
+  else if(head==='n'){g.position.set(x1,0,z0);g.rotation.y=-PI/2;L=z1-z0;W=x1-x0;}
+  else{g.position.set(x0,0,z1);g.rotation.y=PI/2;L=z1-z0;W=x1-x0;}
+  const ML=L-.08,MW=W-.08;
+  B(.06,0,.06,L-.06,.06,W-.06,MAT.greige,{parent:g,cast:false});
+  R(L/2,.2,W/2,L-.02,.24,W,.03,headMat,o);                                     // kárpitozott ágykeret
+  R(L/2+.02,.42,W/2,ML,.2,MW,.05,MAT.linen,o);                                 // matrac
+  R(.05,.62,W/2,.1,1.05,W+.06,.04,headMat,o);                                  // magas, kárpitozott fejvég
+  for(let i=0;i<Math.round(W/.36);i++){const zz=.06+i*(W-.12)/Math.round(W/.36);B(.1,.5,zz,.102,1.12,zz+.004,MAT.greige,{parent:g,cast:false});}
+  const dx0=.62,dx1=L-.01;R((dx0+dx1)/2,.54,W/2,dx1-dx0,.06,MW+.04,.03,duvet,o);
+  B(dx0,.3,-.02,dx1,.56,.04,duvet,o);B(dx0,.3,W-.04,dx1,.56,W+.02,duvet,o);B(dx1-.04,.3,0,dx1+.03,.56,W,duvet,o);
+  R(L-.42,.585,W/2,.42,.03,MW+.1,.015,accent,o);
+  const np=W>1.5?2:2;for(let i=0;i<np;i++)R(.32,.62,W*(i+.5)/np,.42,.16,W/np-.08,.07,MAT.linen,o);
+  R(.5,.64,W/2,.13,.3,.42,.06,accent,o);
+  g.updateMatrixWorld(true);const bb=new T.Box3().setFromObject(g);solids.push([bb.min.x+.05,bb.min.z+.05,bb.max.x-.05,bb.max.z-.05]);
+  blob((bb.min.x+bb.max.x)/2,(bb.min.z+bb.max.z)/2,bb.max.x-bb.min.x+.4,bb.max.z-bb.min.z+.4,.45);return g;}
+function nightstand(x,z,side,lampMat){const {g,o}=place(x-.22,z-.2,x+.22,z+.2,side);
+  B(0,.12,0,.44,.5,.38,MAT.vanity,{parent:g});B(.03,.0,.03,.06,.12,.06,MAT.black,o);B(.38,0,.03,.41,.12,.06,MAT.black,o);B(.03,0,.32,.06,.12,.35,MAT.black,o);B(.38,0,.32,.41,.12,.35,MAT.black,o);
+  B(.02,.3,.38,.42,.302,.384,MAT.greige,{parent:g,cast:false});
+  C(.22,.5,.18,.06,.07,.03,MAT.brass,o);C(.22,.53,.18,.008,.008,.25,MAT.brass,o);C(.22,.72,.18,.11,.15,.17,lampMat||MAT.linen,o);
+  g.updateMatrixWorld(true);const p=new T.Vector3(.22,.74,.18).applyMatrix4(g.matrixWorld);point(p.x,p.y,p.z,2.2,2.6);
+  solids.push([x-.22,z-.2,x+.22,z+.2]);return g;}
+// modern íróasztal székkel (helyi: asztallap x 0..w, z 0..d, a szék a +z oldalon)
+function desk(x0,z0,x1,z1,side,chairMat){const {g,L,D,o}=place(x0,z0,x1,z1,side);
+  B(0,.72,0,L,.75,D,MAT.deskTop,{parent:g,uv:3});
+  B(.02,0,.04,.05,.72,D-.04,MAT.white,o);B(L-.42,0,.04,L-.02,.72,D-.04,MAT.white,o);
+  for(let i=1;i<3;i++)B(L-.42,i*.24-.003,D-.04,L-.02,i*.24+.003,D-.035,MAT.greige,{parent:g,cast:false});
+  for(let i=0;i<3;i++)B(L-.27,.12+i*.24,D-.035,L-.17,.13+i*.24,D-.02,MAT.black,o);
+  // lámpa, laptop, könyvek, növény
+  C(.16,.75,.14,.07,.07,.02,MAT.black,o);C(.16,.77,.14,.008,.008,.38,MAT.black,o);const arm=B(.16,1.13,.1,.42,1.15,.13,MAT.black,o);
+  C(.42,1.06,.12,.04,.07,.09,MAT.black,o);Sph(.42,1.05,.12,.03,GLOW.opal,1,1,1,{parent:g,cast:false});
+  B(.50,.75,.12,.85,.762,.36,MAT.alu,o);const sc=B(.50,.762,.1,.85,.98,.115,MAT.tv,o);sc.rotation.x=-.2;
+  for(let i=0;i<3;i++)B(L-.28,.75+i*.03,.08,L-.06,.78+i*.03,.3,MAT.books[(i+1)%4],o);
+  // szék
+  const cz=D+.32,cx=L/2;R(cx,.46,cz,.46,.06,.44,.03,chairMat,o);R(cx,.74,cz+.22,.44,.34,.05,.03,chairMat,{parent:g,rx:.12});
+  C(cx,0,cz,.27,.27,.02,MAT.black,o);C(cx,.02,cz,.022,.022,.4,MAT.black,o);
+  g.updateMatrixWorld(true);const p=new T.Vector3(.42,.95,.15).applyMatrix4(g.matrixWorld);point(p.x,p.y,p.z,1.8,2.2);
+  solids.push([Math.min(x0,x1),Math.min(z0,z1),Math.max(x0,x1),Math.max(z0,z1)]);return g;}
+// falikép: axis='x' → a fal síkja x=w (a fal z irányú), n: a kép normálisa (±1)
+function art(axis,w,n,a0,a1,y0,y1,seed,pal){const m=M({map:artTex(seed,pal),roughness:.9});
+  if(axis==='x'){B(w,y0,a0,w+n*.03,y1,a1,MAT.oak);B(w+n*.03,y0+.03,a0+.03,w+n*.033,y1-.03,a1-.03,m,{cast:false});}
+  else{B(a0,y0,w,a1,y1,w+n*.03,MAT.oak);B(a0+.03,y0+.03,w+n*.03,a1-.03,y1-.03,w+n*.033,m,{cast:false});}}
+function armchair(x,z,ry,mat){const g=new T.Group();g.position.set(x,0,z);g.rotation.y=ry;root.add(g);const o={parent:g};
+  for(const [a,b] of [[-.3,-.28],[.3,-.28],[-.3,.28],[.3,.28]])C(a,0,b,.02,.014,.16,MAT.oak,o);
+  R(0,.25,0,.8,.18,.76,.06,mat,o);R(0,.4,.04,.58,.13,.64,.06,mat,o);
+  R(0,.6,-.3,.8,.52,.17,.07,mat,{parent:g,rx:-.08});
+  R(-.33,.49,.0,.14,.3,.76,.06,mat,o);R(.33,.49,.0,.14,.3,.76,.06,mat,o);
+  R(0,.62,-.15,.4,.26,.12,.05,MAT.fabricTerra,{parent:g,rx:-.2});return g;}
+function wallHungWC(x,z,side){const {g,o}=place(x-.2,z-.28,x+.2,z+.28,side);
+  // helyi: fal a z=0-nál, a csésze +z felé
+  B(-.0,0,0,.4,1.05,.14,MAT.wetWall,{parent:g,uv:2.4});B(-.01,1.05,-.0,.41,1.08,.16,MAT.quartz,o);
+  R(.2,.33,.22,.34,.2,.18,.06,MAT.ceramic,o);Sph(.2,.34,.36,.18,MAT.ceramic,1,.6,1.45,o);
+  const seat=new T.Mesh(new T.TorusGeometry(.13,.024,10,36),MAT.ceramic);seat.rotation.x=PI/2;seat.scale.set(1,1.4,1);seat.position.set(.2,.43,.38);g.add(seat);
+  const lid=new T.Mesh(new T.CylinderGeometry(.17,.17,.02,40),MAT.ceramic);lid.scale.set(1,1,1.3);lid.position.set(.2,.455,.37);lid.castShadow=true;g.add(lid);
+  B(.08,.86,.14,.32,1.0,.15,MAT.chrome,{parent:g,cast:false});B(.1,.88,.15,.19,.98,.156,MAT.white,{parent:g,cast:false});B(.21,.88,.15,.3,.98,.156,MAT.white,{parent:g,cast:false});
+  g.updateMatrixWorld(true);const bb=new T.Box3().setFromObject(g);solids.push([bb.min.x,bb.min.z,bb.max.x,bb.max.z]);blob((bb.min.x+bb.max.x)/2,(bb.min.z+bb.max.z)/2,.6,.6,.3);return g;}
+function tileWalls(x0,z0,x1,z1,h,mat,skip=[]){const d=.012;
+  if(!skip.includes('n'))B(x0,0,z0,x1,h,z0+d,mat,{uv:2.4,cast:false});if(!skip.includes('s'))B(x0,0,z1-d,x1,h,z1,mat,{uv:2.4,cast:false});
+  if(!skip.includes('w'))B(x0,0,z0,x0+d,h,z1,mat,{uv:2.4,cast:false});if(!skip.includes('e'))B(x1-d,0,z0,x1,h,z1,mat,{uv:2.4,cast:false});}
+function rug(x0,z0,x1,z1,mat,s){floorRect(x0,z0,x1,z1,mat,s||Math.max(x1-x0,z1-z0),.006);}
+function pendant(x,z,y,r,mat){B(x-.002,y+r,z-.002,x+.002,H,z+.002,MAT.black,{cast:false});C(x,H-.02,z,.05,.05,.02,MAT.black);
+  Sph(x,y,z,r,mat||GLOW.opal,1,1,1,{cast:false});}
+// ---------- NAPPALI – ÉTKEZŐ – KONYHA ----------
+{// TV-fal: bézs festett fal, a TV mögött padlótól mennyezetig tartó tölgy lamellás mező (rejtett LED-del),
+ // mellette aszimmetrikus, lebegő tölgy polcok és egy világított fülke-hatású panel
+ B(9.40,0,4.60,9.404,H,7.20,MAT.beige,{cast:false});
+ B(9.404,0,5.05,9.41,H,6.95,MAT.blackMatte,{cast:false});
+ for(let z=5.07;z<6.93;z+=.06)B(9.41,0,z,9.45,H,z+.035,MAT.slats,{uv:1.2});
+ B(9.41,H-.02,5.05,9.47,H,6.95,MAT.doorWood);
+ for(const z of [5.03,6.95])B(9.405,0,z-.008,9.42,H,z+.008,GLOW.led,{cast:false});
+ for(const [y,z0,z1] of [[1.35,4.62,4.98],[1.75,4.62,4.98],[2.15,4.62,4.98],[1.2,6.98,7.18],[1.65,6.98,7.18]])B(9.40,y,z0,9.66,y+.035,z1,MAT.doorWood);
+ for(let i=0;i<3;i++)B(9.45,1.385,4.66+i*.035,9.62,1.385+.2+(i%2)*.03,4.69+i*.035,MAT.books[i]);C(9.53,1.785,4.85,.05,.04,.16,MAT.ceramic);
+ Sph(9.52,2.24,4.8,.07,MAT.leaf,1,1.1,1);C(9.52,2.185,4.8,.05,.045,.07,MAT.potDark);C(9.53,1.235,7.08,.045,.04,.12,MAT.ceramic);
+ point(9.7,2.2,6.0,1.5,2.2,'#ffcf92');
+ B(9.45,.18,5.05,9.90,.55,6.95,MAT.white,{solid:true});B(9.45,.55,5.05,9.92,.58,6.95,MAT.oakLight,{uv:2.4});
+ for(const z of [5.55,6.05,6.45])B(9.899,.2,z-.002,9.902,.53,z+.002,MAT.greige,{cast:false});
+ B(9.46,.98,5.35,9.50,1.78,6.75,MAT.tv);B(9.455,1.0,5.36,9.46,1.76,6.74,GLOW.ledCool,{cast:false});
+ B(9.46,H-.04,4.66,9.5,H-.01,7.14,GLOW.led,{cast:false});
+ C(9.7,.58,5.25,.06,.08,.22,MAT.ceramic);plant(9.75,6.75,.25,.58,MAT.potDark);
+ for(let i=0;i<4;i++)B(9.55,.58+i*.035,6.1,9.8,.61+i*.035,6.4,MAT.books[i]);
+ // L alakú kanapé a DK-i sarokban
+ const S=MAT.sofaFab;
+ B(11.35,0,6.38,14.27,.12,7.17,MAT.black,{solid:true});B(13.45,0,4.75,14.27,.12,6.38,MAT.black,{solid:true});
+ R(12.62,.3,6.82,2.5,.28,.7,.07,S);R(13.86,.3,5.6,.78,.28,1.7,.07,S);R(13.86,.3,6.82,.78,.28,.7,.07,S);
+ R(12.75,.62,7.08,2.8,.5,.2,.08,S);R(14.15,.62,5.95,.2,.5,2.4,.08,S);R(11.47,.5,6.82,.22,.4,.74,.08,S);
+ for(const [x,z,m,ry] of [[11.95,6.92,MAT.fabricTerra,0],[12.6,6.92,MAT.boucle,0],[13.9,6.75,MAT.fabricSage,0],[13.95,5.2,MAT.boucle,PI/2]])R(x,.62,z,.46,.42,.14,.06,m,{rx:.2,ry});
+ R(13.0,.48,6.75,.9,.04,.6,.02,MAT.fabricOlive,{ry:.3});
+ blob(12.6,6.75,3.2,1.1,.5);blob(13.86,5.6,1.1,2.1,.5);
+ rug(10.6,4.35,13.55,6.55,MAT.rugLiving,2.95);
+ C(12.3,0,5.5,.42,.36,.32,MAT.walnutTop);C(12.3,.32,5.5,.5,.5,.035,MAT.walnutTop);C(11.6,0,5.0,.25,.25,.42,MAT.beigeFab);solids.push([11.8,5.0,12.8,6.0]);
+ blob(12.3,5.5,1.3,1.3,.45);for(let i=0;i<3;i++)B(12.1,.355+i*.03,5.35,12.45,.385+i*.03,5.6,MAT.books[i]);C(12.55,.355,5.65,.07,.05,.2,MAT.ceramic);
+ plant(14.05,2.72,.38);
+ // étkező: 180×90 asztal 6 székkel, függesztett lámpák
+ const cx=12.6,cz=2.45;B(cx-.85,.72,cz-.425,cx+.85,.76,cz+.425,MAT.walnutTop,{uv:1.2});
+ for(const [x,z] of [[-.74,-.34],[.74,-.34],[-.74,.34],[.74,.34]])B(cx+x-.03,0,cz+z-.03,cx+x+.03,.72,cz+z+.03,MAT.black);
+ B(cx-.76,.66,cz-.36,cx+.76,.72,cz+.36,MAT.walnutTop,{uv:1.2});solids.push([cx-1.15,cz-.8,cx+1.15,cz+.8]);blob(cx,cz,2.6,1.8,.45);
+ function chair(x,z,ry){const g=new T.Group();g.position.set(x,0,z);g.rotation.y=ry;root.add(g);
+   R(0,.46,0,.47,.08,.46,.03,MAT.chairFab,{parent:g});R(0,.74,-.22,.46,.42,.06,.03,MAT.chairFab,{parent:g,rx:-.12});
+   for(const [a,b] of [[-.2,-.19],[.2,-.19],[-.2,.19],[.2,.19]])C(a,0,b,.014,.012,.43,MAT.black,{parent:g});}
+ chair(cx-.42,cz-.36,0);chair(cx+.42,cz-.36,0);chair(cx-.42,cz+.36,PI);chair(cx+.42,cz+.36,PI);chair(cx-.80,cz,PI/2);chair(cx+.80,cz,-PI/2);
+ C(cx,.76,cz,.08,.06,.24,MAT.ceramic);for(let i=0;i<3;i++)Sph(cx+(i-1)*.06,1.06+i*.05,cz,.05,MAT.leaf,.7,1.6,.7);
+ for(const dx of [-.55,0,.55])pendant(cx+dx,cz,1.55,.13);
+ spot(cx,1.45,cz,cx,0,cz,30,1.15,.9,true,'#ffd6a4');point(cx,1.6,cz,4,3.2);
+ // konyha: alsó szekrénysor az északi falon, L-visszafordulás a nyugati falon, magas szekrényoszlop, felső szekrények
+ const x0=10.30,x1=13.00,zf=.90;
+ B(x0,0,.30,x1,.1,zf-.06,MAT.greige);
+ const n=5,dx=(x1-x0)/n;for(let i=0;i<n;i++){B(x0+i*dx+.003,.1,zf-.02,x0+(i+1)*dx-.003,.87,zf,MAT.white);B(x0+i*dx+.15,.8,zf,x0+(i+1)*dx-.15,.81,zf+.012,MAT.black,{cast:false});
+   B(x0+i*dx+.003,.48,zf-.001,x0+(i+1)*dx-.003,.482,zf+.001,MAT.greige,{cast:false});}
+ B(x0,.1,.30,x1,.66,zf-.02,MAT.white,{solid:true});B(x0,.66,.30,10.88,.87,zf-.02,MAT.white);B(11.62,.66,.30,x1,.87,zf-.02,MAT.white);
+ B(10.88,.66,.30,11.62,.87,.36,MAT.white);B(10.88,.66,.84,11.62,.87,zf-.02,MAT.white);
+ cutTop(x0,.30,x1,zf+.02,.87,.91,[[11.25,.6,.68,.42,.03]],MAT.walnutTop,1.2);
+ sinkBowl(11.25,.87,.6,.68,.42,.2);tap(11.25,.91,.35,0,1,.2,.32,MAT.blackMatte);
+ B(11.95,.91,.36,12.75,.915,.84,MAT.tv);for(const [a,b] of [[12.15,.5],[12.55,.5],[12.15,.72],[12.55,.72]]){const rg=new T.Mesh(new T.TorusGeometry(.08,.004,6,24),MAT.steel);rg.rotation.x=PI/2;rg.position.set(a,.917,b);root.add(rg);}
+ B(x0,.10,.90,x0+.6,.87,1.78,MAT.white,{solid:true});B(x0+.6,.1,.92,x0+.62,.87,1.78,MAT.white);B(x0+.6,.48,.92,x0+.622,.482,1.78,MAT.greige,{cast:false});
+ B(x0+.62,.8,1.1,x0+.632,.81,1.6,MAT.black,{cast:false});cutTop(x0,zf+.02,x0+.64,1.78,.87,.91,[],MAT.walnutTop,1.2);
+ B(x0,.91,.30,x0+.02,1.45,1.78,MAT.quartz,{cast:false});B(x0,.91,.30,x1,1.45,.32,MAT.quartz,{cast:false});
+ B(x0,1.45,.30,12.0,H,.65,MAT.white);for(let x=x0+.6;x<12;x+=.6)B(x-.002,1.45,.648,x+.002,H,.652,MAT.greige,{cast:false});
+ B(x0,2.299,.648,13.0,2.301,.652,MAT.greige,{cast:false});
+ B(12.0,1.68,.30,12.7,H,.65,MAT.white);B(12.0-.002,1.68,.648,12.0+.002,H,.652,MAT.greige,{cast:false});B(12.7-.002,1.45,.648,12.7+.002,H,.652,MAT.greige,{cast:false});
+ B(12.02,1.60,.30,12.68,1.68,.60,MAT.steel);B(12.02,1.56,.40,12.68,1.68,.66,MAT.steel);B(12.03,1.565,.655,12.67,1.675,.668,MAT.tv);
+ B(12.30,1.60,.668,12.40,1.61,.67,GLOW.display,{cast:false});
+ for(const x of [12.15,12.55]){C(x,1.555,.52,.025,.025,.005,GLOW.ledCool,{cast:false});}spot(12.35,1.54,.52,12.35,.9,.52,6,.9,1,false,'#fff1dc');
+ for(let k=0;k<9;k++)B(12.06+k*.065,1.559,.32,12.1+k*.065,1.561,.38,MAT.black,{cast:false});
+ B(x0,1.43,.32,12.0,1.45,.62,GLOW.led,{cast:false});point(11.2,1.3,.7,3.5,1.8,'#ffd6a8');
+ B(12.7,1.45,.30,13.0,H,.65,MAT.white);
+ B(13.00,0,.30,14.28,H-.02,.95,MAT.white,{solid:true});for(const x of [13.64])B(x-.002,.05,.95,x+.002,H-.07,.953,MAT.greige,{cast:false});
+ B(13.68,.95,.951,14.24,1.55,.955,MAT.tv,{cast:false});B(13.7,1.47,.955,14.22,1.5,.957,GLOW.display,{cast:false});
+ for(const [x,y] of [[13.55,1.1],[13.55,.5],[13.08,1.2],[13.08,1.9]])B(x,y,.953,x+.02,y+.35,.98,MAT.steel);
+ plant(10.6,1.55,.18,.91,MAT.potDark);C(11.8,.91,.45,.09,.09,.16,MAT.oakLight);
+ for(let i=0;i<3;i++)C(10.55+i*.14,.91,.42,.05,.05,.18+i*.04,MAT.ceramic);
+ spot(11.6,H-.03,1.3,11.6,0,1.3,22,1.1,1,false);
+ for(const [x,z] of [[10.9,1.25],[11.9,1.25],[12.9,1.25],[13.7,1.6],[12.3,5.5],[10.9,6.2],[13.4,4.0],[11.4,3.6]])downlight(x,z);
+ spot(12.3,H-.03,5.6,12.3,0,5.6,40,1.2,1,true);spot(10.8,H-.03,4.2,10.8,0,4.2,26,1.2,1,true);
+ point(11.9,2.3,4.6,5,6,'#ffdcb4');}
+// ---------- BÉZS HANGSÚLYFALAK (szobánként egy) ----------
+{const P=(x0,z0,x1,z1)=>B(x0,0,z0,x1,H,z1,MAT.beige,{cast:false});
+ P(.30,.30,.304,4.00);          // 08 – az ágy mögötti nyugati fal
+ P(.30,4.70,.304,7.20);         // 09 – az ágy mögötti nyugati fal
+ P(5.30,4.10,6.70,4.104);       // 10 – az ágy mögötti északi fal
+ P(6.80,4.60,6.804,7.80);       // előtér – a gardrób felőli fal
+ P(5.15,3.0,6.62,3.004);        // közlekedő – a festmény mögötti falszakasz
+ P(6.50,.30,6.504,2.70);}       // háztartási – nyugati fal
+// ---------- KÖZLEKEDŐ ----------
+{rug(4.45,3.2,8.0,3.8,MAT.rugBed,1.4);
+ B(8.62,0,3.0,9.38,.85,3.38,MAT.vanity,{uv:3,solid:true});B(8.62,.85,3.0,9.38,.88,3.4,MAT.quartz);C(9.2,.88,3.2,.07,.05,.22,MAT.ceramic);
+ art('z',3.0,1,8.72,9.28,1.3,2.0,7,['#ece5d8','#a9ad96','#d4a77a','#6f7f88']);
+ art('z',3.0,1,5.45,6.40,1.25,1.95,13,['#efe8dc','#c98a5a','#8f9a7b','#d7b98f']);
+ for(const x of [4.7,6.2,7.7])downlight(x,3.5);downlight(4.7,4.6);
+ spot(6.2,H-.03,3.5,6.2,0,3.5,24,1.2,1,true);point(4.7,2.3,4.6,2.5,2.5);}
+// ---------- ELŐTÉR ----------
+{// beépített szekrény a WC felőli falon, a 45 cm mély fülkében (az alaprajz szerint), fehér + tölgy frontokkal
+ {const x0=7.86,x1=8.30,z0=5.60,zc=7.00,z1=7.80;
+  // zárt, ajtós rész (3 front: fehér – tükör – fehér)
+  B(x0+.03,0,z0,x1,H,zc,MAT.white,{solid:true});
+  const n=3,pw=(zc-z0)/n;for(let i=0;i<n;i++){const m=i===1?MAT.mirror:MAT.white;
+   B(x0,.06,z0+i*pw+.003,x0+.03,H-.02,z0+(i+1)*pw-.003,m);
+   if(i!==1){const hz=i===0?z0+(i+1)*pw-.06:z0+i*pw+.06;B(x0-.025,.95,hz-.008,x0,1.55,hz+.008,MAT.black);}}
+  B(x0+.01,0,z0,x0+.03,.06,zc,MAT.greige,{cast:false});
+  // nyitott fogasrész: fa hátlap, kalaptartó polc, fogasok, akasztott kabátok, cipőpolc
+  B(x0,0,zc,x1,H,zc+.02,MAT.white);
+  B(x1-.02,0,zc+.02,x1,H,z1,MAT.doorWood);
+  B(x0,2.0,zc+.02,x1-.02,2.03,z1,MAT.doorWood);B(x0,H-.02,zc,x1,H,z1,MAT.white);
+  B(x1-.05,1.72,zc+.04,x1-.02,1.78,z1-.02,MAT.doorWood);
+  for(const z of [7.12,7.30,7.48,7.66]){B(x1-.08,1.74,z-.008,x1-.05,1.76,z+.008,MAT.black);B(x1-.09,1.70,z-.008,x1-.075,1.76,z+.008,MAT.black);}
+  const coat=(z,col,len)=>{const m=M({color:col,roughness:.95,bumpMap:TX.fabric,bumpScale:.6});
+    R(x1-.17,1.68-len/2,z,.2,len,.34,.06,m);Sph(x1-.17,1.68,z,.11,m,1,.5,1.5);};
+  coat(7.18,'#6d6a64',.85);coat(7.45,'#b79b78',.95);coat(7.68,'#3f4a55',.75);
+  B(x0,.30,zc+.02,x1-.02,.32,z1,MAT.doorWood);B(x0,0,zc+.02,x1-.02,.04,z1,MAT.doorWood);
+  for(const [z,c] of [[7.15,'#2b2b2b'],[7.42,'#c9b9a3'],[7.66,'#5a3f2c']]){const m=M({color:c,roughness:.6});
+    R(x1-.16,.36,z-.05,.26,.08,.09,.03,m);R(x1-.16,.36,z+.05,.26,.08,.09,.03,m);}
+  B(x0,H-.025,z0,x0+.03,H-.005,zc,GLOW.led,{cast:false});point(x1-.25,1.95,7.4,1.2,1.5);}
+ // a gardrób felőli falon: tükör, akasztók, keskeny pad
+ B(6.80,1.0,5.0,6.83,2.05,5.75,MAT.doorWood);B(6.83,1.03,5.03,6.835,2.02,5.72,MAT.mirror,{cast:false});
+ rug(7.18,4.75,7.75,7.55,MAT.rugBed,1.2);
+ point(7.35,2.3,6.0,4,3.5);downlight(7.35,5.1);downlight(7.35,6.9);}
+// ---------- WC ----------
+{tileWalls(8.40,4.60,9.30,7.80,1.25,MAT.wetWall,['w']);B(8.40,0,5.45,8.412,1.25,7.80,MAT.wetWall,{uv:2.4,cast:false});
+ wallHungWC(8.85,7.52,'n');
+ B(9.04,.62,5.55,9.30,.84,6.15,MAT.vanity);B(9.035,.725,5.75,9.04,.735,5.95,MAT.black,{cast:false});vessel(9.15,.84,5.85,.11,.18,.11);tap(9.28,.84,5.85,-1,0,.09,.22);
+ B(9.29,1.1,5.55,9.30,1.7,6.15,MAT.mirror,{cast:false});B(9.28,1.72,5.55,9.30,1.74,6.15,GLOW.ledCool,{cast:false});solids.push([9.0,5.5,9.3,6.2]);
+ point(8.85,2.3,6.2,2.6,2.6);downlight(8.85,6.2);}
+// ---------- FÜRDŐSZOBA ----------
+{tileWalls(4.20,.30,6.40,2.70,H,MAT.wetWall,['n','s']);
+ for(const [a,b,y0,y1] of [[4.2,5.1,0,H],[6.0,6.4,0,H],[5.1,6.0,0,1.8],[5.1,6.0,2.4,H]])B(a,y0,.30,b,y1,.312,MAT.wetWall,{uv:2.4,cast:false});
+ for(const [a,b] of [[4.2,4.4],[5.15,6.4]])B(a,0,2.688,b,H,2.70,MAT.wetWall,{uv:2.4,cast:false});B(4.4,2.1,2.688,5.15,H,2.70,MAT.wetWall,{uv:2.4,cast:false});
+ // zuhany az ÉNy-i sarokban: lejtős zuhanytálca, üvegfal, esőztető zuhanyfej, fali fülke
+ B(4.21,0,.31,5.20,.02,1.28,MAT.bigTile,{uv:1.2});B(4.6,.02,1.0,4.8,.023,1.08,MAT.steel,{cast:false});
+ B(5.19,.02,.31,5.21,2.05,1.10,MAT.glassShower,{cast:false,recv:false});B(5.18,2.05,.31,5.22,2.08,1.10,MAT.alu,{cast:false});
+ C(4.65,2.15,.75,.15,.15,.012,MAT.chrome);B(4.64,2.2,.31,4.66,2.22,.75,MAT.chrome);C(4.6,.9,.32,.03,.03,.05,MAT.chrome);B(4.22,1.15,.6,4.3,1.45,.95,MAT.accentWall,{cast:false});
+ solids.push([4.2,.3,5.22,1.1]);
+ wallHungWC(5.70,.58,'s');
+ // mosdópult a keleti falon, kerek tükör LED-gyűrűvel
+ B(5.90,.45,1.10,6.39,.82,1.95,MAT.vanity,{uv:3,solid:true});B(5.88,.82,1.08,6.39,.85,1.97,MAT.quartz);
+ vessel(6.10,.85,1.52,.2,.25,.14);tap(6.36,.85,1.52,-1,0,.15,.3);
+ {const ring=new T.Mesh(new T.TorusGeometry(.33,.018,8,48),GLOW.ring);ring.rotation.y=PI/2;ring.position.set(6.385,1.62,1.52);root.add(ring);
+  const mir=new T.Mesh(new T.CircleGeometry(.32,48),MAT.mirror);mir.rotation.y=-PI/2;mir.position.set(6.383,1.62,1.52);root.add(mir);}
+ point(6.1,1.62,1.52,2.4,1.8,'#ffe0bc');plant(6.2,1.18,.2,.85);B(6.0,.85,1.85,6.3,.93,1.95,MAT.linen);
+ // törölközőszárító radiátor a déli falon
+ for(let y=.3;y<1.6;y+=.1)B(5.40,y,2.66,5.95,y+.025,2.68,MAT.white);for(const x of [5.4,5.93])B(x,.25,2.65,x+.025,1.65,2.69,MAT.white);
+ B(5.45,.9,2.62,5.9,1.3,2.66,MAT.linen);
+ rug(4.6,1.5,5.6,2.3,MAT.rugBed,1.1);
+ spot(5.3,H-.03,1.6,5.3,0,1.6,24,1.2,1,true,'#ffe2c2');downlight(5.3,1.6);downlight(4.7,.8);downlight(5.7,.8);}
+// ---------- HÁZTARTÁSI HELYISÉG (kondenzációs kombi gázkazán) ----------
+function appliance(px,py,pz,ry,type){const g=new T.Group();g.position.set(px,py,pz);g.rotation.y=ry;root.add(g);const o={parent:g};
+  const h=.85,dc=.43;
+  R(0,h/2,-.3,.6,h,.6,.02,MAT.appl,o);B(-.29,0,-.02,.29,.06,.004,MAT.greige,o);
+  B(-.29,h-.13,.0,.29,h-.02,.006,MAT.appl,o);B(-.27,h-.115,.006,-.1,h-.035,.014,MAT.appl,o);
+  const knob=C(.17,h-.075,.02,.034,.034,.03,MAT.steel,o);knob.rotation.x=PI/2;knob.position.set(.17,h-.075,.02);
+  B(-.05,h-.1,.006,.08,h-.05,.009,MAT.tv,o);B(-.04,h-.09,.009,.07,h-.06,.0095,GLOW.display,{parent:g,cast:false});
+  const outer=new T.Mesh(new T.TorusGeometry(.2,.03,16,48),MAT.appl);outer.position.set(0,dc,.03);g.add(outer);
+  const chromeR=new T.Mesh(new T.TorusGeometry(.2,.012,12,48),MAT.chrome);chromeR.position.set(0,dc,.058);g.add(chromeR);
+  const gl=new T.Mesh(new T.SphereGeometry(.2,32,12,0,PI*2,0,.7),MAT.doorGlass);gl.rotation.x=PI/2;gl.position.set(0,dc,-.1);gl.scale.set(.95,.6,.95);g.add(gl);
+  const seal=new T.Mesh(new T.TorusGeometry(.16,.02,10,40),MAT.cushionGray);seal.position.set(0,dc,.0);g.add(seal);
+  const drum=new T.Mesh(new T.CylinderGeometry(.16,.16,.02,40),MAT.steel);drum.rotation.x=PI/2;drum.position.set(0,dc,-.35);g.add(drum);
+  B(.19,dc-.05,.03,.215,dc+.05,.06,MAT.greige,o);return g;}
+{// mosógép + ráépített szárítógép (összeépítő kerettel, kihúzható polccal)
+ appliance(7.98,.0,.92,0,'wash');B(7.67,.85,.31,8.29,.89,.93,MAT.greige);B(7.70,.86,.93,8.26,.875,1.05,MAT.white);appliance(7.98,.89,.92,0,'dry');
+ solids.push([7.66,.3,8.30,.95]);
+ // mosogatószekrény
+ {const V=MAT.vanity,sx=7.02;
+  B(6.52,0,.30,7.50,.62,.90,V,{solid:true});B(6.52,.62,.30,6.80,.86,.90,V);B(7.24,.62,.30,7.50,.86,.90,V);
+  B(6.80,.62,.30,7.24,.86,.37,V);B(6.80,.62,.83,7.24,.86,.90,V);
+  B(7.12,.04,.90,7.122,.85,.903,MAT.greige,{cast:false});for(const x of [7.06,7.18])B(x-.01,.55,.90,x+.01,.78,.915,MAT.black);
+  B(6.52,0,.90,7.12,.86,1.60,V,{solid:true});
+  for(const y of [.30,.58])B(7.12,y-.001,.92,7.123,y+.001,1.58,MAT.greige,{cast:false});for(const y of [.18,.45,.74])B(7.12,y-.008,1.15,7.135,y+.008,1.35,MAT.black);
+  cutTop(6.52,.30,7.50,.92,.86,.89,[[sx,.6,.40,.40,.02]],MAT.quartz,1.2);cutTop(6.52,.92,7.14,1.62,.86,.89,[],MAT.quartz,1.2);
+  sinkBowl(sx,.86,.6,.40,.40,.22);tap(sx,.89,.36,0,1,.18,.3);
+  C(6.78,.89,1.42,.12,.11,.26,M({color:'#a98356',roughness:.95,bumpMap:TX.fabric,bumpScale:1.2}));
+  R(6.85,.94,1.05,.34,.1,.26,.04,MAT.linen);R(6.85,1.03,1.05,.32,.08,.24,.04,MAT.fabricSage);}
+ B(6.55,1.35,.30,7.05,2.05,.62,MAT.appl);B(6.6,1.45,.62,7.0,1.5,.625,MAT.tv,{cast:false});B(6.75,1.47,.625,6.85,1.49,.627,GLOW.display,{cast:false});
+ for(const x of [6.65,6.8,6.95])C(x,1.15,.4,.012,.012,.2,MAT.steel);
+ B(8.10,0,1.80,8.69,H-.02,2.62,MAT.white,{solid:true});B(8.098,.05,2.208,8.1,H-.07,2.212,MAT.greige,{cast:false});
+ for(const z of [2.15,2.27])B(8.08,1.0,z-.01,8.1,1.4,z+.01,MAT.black);
+ point(7.5,2.3,1.6,3.2,3);downlight(7.5,1.6);}
+// ---------- KAMRA ----------
+{const jarGlass=M({color:'#eef3f0',roughness:.05,transparent:true,opacity:.3,depthWrite:false});
+ const food=['#e3c98f','#8a3b22','#f1ece0','#4a2e1f','#c9a24a','#6b7b3a','#d9793a'].map(c=>M({color:c,roughness:.9}));
+ const boxM=['#c8a77a','#e9e4da','#9aa58b','#b85c3c','#d8c7a3','#3f5566'].map(c=>M({color:c,roughness:.8}));
+ const bottleM=M({color:'#2f4a33',roughness:.08,transparent:true,opacity:.8}),oilM=M({color:'#c9a23a',roughness:.08,transparent:true,opacity:.85});
+ const basketM=M({color:'#a98356',roughness:.95,bumpMap:TX.fabric,bumpScale:1.2});
+ const fill=(x0,x1,z0,z1,y,seed,maxH=.3)=>{const r=rng(seed),ax=(x1-x0)>(z1-z0),a1=ax?x1:z1,cc=ax?(z0+z1)/2:(x0+x1)/2,dep=ax?z1-z0:x1-x0;
+   const P=(a,c)=>ax?[a,c]:[c,a];let a=(ax?x0:z0)+.03;
+   for(;;){const t=r();let w=t<.42?.09+r()*.035:t<.7?.1+r()*.12:t<.86?.075:.24;if(a+w>a1-.02)break;
+     if(t<.42){const rr=w/2,h=Math.min(maxH,.12+r()*.09),[x,z]=P(a+rr,cc);C(x,y,z,rr*.88,rr*.88,h*.78,food[(r()*7)|0],{seg:16});
+       C(x,y,z,rr,rr,h,jarGlass,{seg:16,cast:false});C(x,y+h,z,rr*1.04,rr*1.04,.022,r()<.5?MAT.wood:MAT.steel,{seg:16});}
+     else if(t<.7){const h=Math.min(maxH,.13+r()*.13),d=dep*(.55+r()*.3),[xa,za]=P(a,cc-d/2),[xb,zb]=P(a+w,cc+d/2);B(xa,y,za,xb,y+h,zb,boxM[(r()*6)|0]);}
+     else if(t<.86){const [x,z]=P(a+w/2,cc),m=r()<.5?bottleM:oilM;C(x,y,z,.034,.034,.19,m,{seg:16});C(x,y+.19,z,.012,.03,.04,m,{seg:12});C(x,y+.23,z,.013,.013,.035,MAT.blackMatte,{seg:12});}
+     else{const d=dep*.85,[xa,za]=P(a,cc-d/2),[xb,zb]=P(a+w,cc+d/2);B(xa,y,za,xb,y+.15,zb,basketM);}
+     a+=w+.012+r()*.03;}};
+ for(let i=0;i<5;i++){const y=.35+i*.42;B(8.80,y,.32,9.22,y+.025,2.68,MAT.white);fill(8.82,9.2,.34,2.66,y+.025,100+i);
+   B(9.85,y,.32,10.20,y+.025,1.78,MAT.white);fill(9.87,10.18,.34,1.76,y+.025,200+i);}
+ for(let i=0;i<3;i++){const y=.75+i*.42;B(9.22,y,.30,9.85,y+.025,.62,MAT.white);if(i<2)fill(9.24,9.83,.32,.6,y+.025,300+i);}
+ fill(8.82,9.2,.4,2.6,0,400,.28);
+ solids.push([8.8,.3,9.22,2.7],[9.85,.3,10.2,1.8],[9.22,.3,9.85,.62]);
+ point(9.5,2.3,1.6,2.6,2.4);downlight(9.5,1.6);}
+// ---------- 08 – HÁLÓSZOBA ----------
+{bed(.30,1.25,2.40,2.95,'w',MAT.linen,MAT.fabricTerra,MAT.boucle);
+ nightstand(.52,1.0,'e');nightstand(.52,3.2,'e');
+ {const x0=3.30,x1=3.90,z0=.30,z1=2.90,h=1.20,V=MAT.vanity;
+  B(x0+.02,.08,z0,x1,h-.03,z1,MAT.white,{solid:true});B(x0+.05,0,z0+.03,x1,.08,z1-.03,MAT.greige,{cast:false});
+  B(x0-.005,h-.03,z0,x1,h,z1,V);
+  const n=4,pw=(z1-z0)/n;for(let i=0;i<n;i++){B(x0,.08,z0+i*pw+.003,x0+.02,h-.033,z0+(i+1)*pw-.003,MAT.white);
+    const hz=i%2?z0+i*pw+.05:z0+(i+1)*pw-.05;B(x0-.018,h-.33,hz-.006,x0,h-.08,hz+.006,MAT.black);}
+  C(3.6,h,.6,.08,.06,.26,MAT.ceramic);for(let i=0;i<3;i++)B(3.45,h+i*.03,2.35,3.75,h+.03+i*.03,2.6,MAT.books[i]);
+  B(3.85,1.48,.98,3.895,2.16,2.22,MAT.tv);
+  B(3.895,1.46,.96,3.899,2.18,2.24,GLOW.led,{cast:false});}slideWardrobe(.30,4.00,2.70,4.60,'n');
+ rug(1.6,.9,3.15,3.3,MAT.rugBed,2.4);
+ art('x',.30,1,1.55,2.65,1.25,1.95,9,['#efe8dc','#b98c65','#6d7a66','#d9c3a5']);
+ plant(.6,.62,.3);
+ spot(1.8,H-.03,2.1,1.8,0,2.1,28,1.2,1,true);downlight(1.8,2.1);downlight(2.0,4.3);downlight(3.0,1.1);}
+// ---------- 09 – SZOBA (a megadott berendezési rajz szerint) ----------
+//  szekrény 240×60 tolóajtós az északi falon · ágy 140×200 a déli (ablakos) falnál, fejvég nyugatra · íróasztal 60×120 a keleti falnál
+{slideWardrobe(.30,4.70,2.70,5.30,'s');
+ bed(.30,5.80,2.30,7.20,'w',MAT.fabricBlue,MAT.fabricMustard,MAT.fabricSage);
+ desk(3.30,6.00,3.90,7.20,'w',MAT.fabricSage);
+ rug(1.0,5.35,2.9,5.95,MAT.rugKids,1.9);
+ art('x',.30,1,6.05,6.95,1.2,1.8,5,['#f3ece0','#b9c2a8','#8fa18a','#c98a5a']);
+ art('x',3.90,-1,5.25,5.85,1.35,1.95,17,['#efe8dc','#c9a27a','#6e7f86','#a9ad96']);
+ spot(1.9,H-.03,5.9,1.9,0,5.9,26,1.2,1,true);downlight(1.9,5.9);downlight(3.35,4.4);}
+// ---------- 10 – SZOBA, VOLT GARDRÓB (a megadott berendezési rajz szerint, 8,04 m²) ----------
+//  ágy 140×200 a K-i részen, fejvég északra · szekrény 60×160 tolóajtós a Ny-i falon · íróasztal 120×60 az ablak alatt
+{bed(5.30,4.10,6.70,6.10,'n',MAT.linen,MAT.fabricSage,MAT.boucle);
+ slideWardrobe(4.20,6.50,4.80,7.80,'e');
+ desk(5.50,7.20,6.70,7.80,'n',MAT.boucle);
+ rug(4.9,6.15,5.75,6.95,MAT.rugKids,1.3);
+ art('x',6.70,-1,4.6,5.8,1.25,1.85,27,['#efe8dc','#d6aa9b','#8fa3b0','#c9a24a']);
+ B(5.32,1.38,4.11,6.68,1.41,4.3,MAT.vanity);for(let i=0;i<5;i++)B(5.4+i*.05,1.41,4.13,5.44+i*.05,1.58+(i%3)*.03,4.27,MAT.books[i%4]);
+ for(let i=0;i<12;i++){const u=i/11;Sph(5.35+u*1.3,1.75-Math.sin(u*PI)*.1,4.12,.013,GLOW.fairy,1,1,1,{cast:false});}
+ point(6.0,1.7,4.3,1.4,2,'#ffbf7a');
+ spot(5.6,H-.03,5.6,5.6,0,5.6,26,1.2,1,true);downlight(5.6,5.6);downlight(4.75,5.6);downlight(6.0,7.2);}
+
+// ======================================================================
+//  TELEK, KÖRNYEZET (helyszínrajz: Hrsz. 556/2)
+//  – az épület az utcai telekhatártól 3,80 m-re, a hátsó építési vonaltól 6,00 m-re
+//  – gépkocsibeálló (beton térkő) az épülettől keletre, kapubejáróval az utca felől
+//  – személybejáró a bejárati előtető tengelyében
+// ======================================================================
+const PLOT={x0:-.9,x1:30,z0:-6.1,z1:12.0},PARK={x0:21.4,x1:25.6,z0:1.2,z1:12.0},PARK_Y=GROUND+.04;
+floorRect(-60,-40,90,PLOT.z1,MAT.grass,4,GROUND);
+floorRect(-60,20.1,90,60,MAT.grass,4,GROUND);
+// járda, szegély, aszfaltozott közút
+B(-60,GROUND-.2,PLOT.z1,90,GROUND+.04,13.3,MAT.sidewalk,{uv:2,cast:false});
+B(-60,GROUND-.2,13.3,90,GROUND+.06,13.45,MAT.curb,{cast:false});
+floorRect(-60,13.45,90,19.95,MAT.road,4,GROUND-.1);
+B(-60,GROUND-.2,19.95,90,GROUND+.06,20.1,MAT.curb,{cast:false});
+// útburkolati jel (szaggatott felezővonal)
+{const lm=M({color:'#e9e7e0',roughness:.7});for(let x=-58;x<88;x+=6)B(x,GROUND-.1,16.66,x+3,GROUND-.094,16.74,lm,{cast:false});}
+// kavicságy az épület körül és az előkertben
+floorRect(-.9,-.75,15.3,-EPS,MAT.gravel,1.4,GROUND+.008);
+floorRect(-.9,-EPS,-EPS,PLOT.z1,MAT.gravel,1.4,GROUND+.008);
+floorRect(-EPS,7.62,3.78,PLOT.z1,MAT.gravel,1.4,GROUND+.008);
+floorRect(3.78,8.22,6.35,PLOT.z1,MAT.gravel,1.4,GROUND+.008);
+floorRect(8.25,8.22,9.72,PLOT.z1,MAT.gravel,1.4,GROUND+.008);
+floorRect(9.72,7.62,14.72,8.4,MAT.gravel,1.4,GROUND+.008);
+floorRect(14.72,4.96,18.6,5.5,MAT.gravel,1.4,GROUND+.008);
+// előlépcső és személybejáró
+B(5.70,GROUND,8.22,8.90,-.02,9.30,MAT.terrace,{uv:.6});
+B(6.00,GROUND,9.30,8.60,-.16,9.62,MAT.terrace,{uv:.6});
+B(6.40,GROUND,9.62,8.20,GROUND+.03,PLOT.z1,MAT.paver,{uv:2.2,cast:false});
+// gépkocsibeálló és behajtó
+B(PARK.x0,GROUND,PARK.z0,PARK.x1,PARK_Y,PARK.z1,MAT.paver,{uv:2.2,cast:false});
+B(PARK.x0-.1,GROUND,PARK.z0,PARK.x0,PARK_Y+.03,PARK.z1,MAT.curb,{cast:false});B(PARK.x1,GROUND,PARK.z0,PARK.x1+.1,PARK_Y+.03,PARK.z1,MAT.curb,{cast:false});
+B(PARK.x0-.1,GROUND,PARK.z0-.1,PARK.x1+.1,PARK_Y+.03,PARK.z0,MAT.curb,{cast:false});
+// lépőkövek a beállótól a teraszig
+for(let i=0;i<4;i++){const x=18.75+i*.68;B(x,GROUND,3.95,x+.5,GROUND+.03,4.55,MAT.paver,{uv:2.2,cast:false});}
+// ---- terasz: fa burkolat, lépcső, pergola üvegtetővel ----
+B(14.72,GROUND,.30,18.22,-.02,4.66,MAT.deck,{uv:2});
+B(14.72,GROUND,4.66,18.52,-.16,4.96,MAT.deck,{uv:2});B(18.22,GROUND,.30,18.52,-.16,4.66,MAT.deck,{uv:2});
+solids.push([18.0,2.4,18.16,2.56],[18.0,4.43,18.16,4.59]);
+{const W=MAT.walnut;
+ for(const z of [.30,2.40,4.43])B(18.0,-.02,z,18.15,2.32,z+.15,W);
+ B(18.0,2.32,.30,18.15,2.52,4.66,W);B(14.72,2.32,4.43,18.15,2.52,4.58,W);B(14.72,2.38,.30,14.82,2.52,4.58,W);
+ for(let z=.42;z<4.5;z+=.58)B(14.72,2.52,z,18.32,2.64,z+.07,W);
+ const gl=M({color:'#dfe9ec',roughness:.05,transparent:true,opacity:.22,depthWrite:false});
+ B(14.72,2.645,.30,18.36,2.665,4.66,gl,{cast:false,recv:false});
+ B(14.82,2.4,2.2,14.86,2.44,2.6,GLOW.ledCool,{cast:false});}
+// lounge sarokülő, dohányzóasztal
+{const bx=15.0,bz=.36;B(bx,-.02,bz,bx+2.5,.14,bz+.82,MAT.walnut,{uv:1});R(bx+1.25,.28,bz+.44,2.48,.28,.8,.08,MAT.boucle);R(bx+1.25,.56,bz+.12,2.48,.44,.22,.08,MAT.boucle);
+ for(const [x,m] of [[bx+.6,MAT.fabricOlive],[bx+1.3,MAT.fabricCream],[bx+2.0,MAT.fabricTerra]])R(x,.6,bz+.28,.42,.38,.13,.06,m,{rx:-.2});
+ solids.push([bx,bz,bx+2.5,bz+.82]);blob(bx+1.25,bz+.45,2.7,1.1,.4,-.015);
+ C(16.25,-.02,2.0,.45,.38,.34,MAT.wood);C(16.25,.32,2.0,.48,.48,.04,MAT.wood);solids.push([15.8,1.55,16.7,2.45]);
+ C(16.1,.36,1.9,.08,.06,.14,MAT.ceramic);Sph(16.1,.56,1.9,.12,MAT.leaf,1,1.2,1);
+ armchair(15.15,2.35,PI*.55,MAT.boucle);solids.push([14.8,2.0,15.6,2.8]);}
+// függőfotel (az eredeti tervből)
+{const g=new T.Group();g.position.set(17.3,-.02,3.55);g.rotation.y=-2.3;root.add(g);const o={parent:g};
+ C(0,0,0,.4,.44,.035,MAT.blackMatte,o);
+ const pts=[[0,.03,0],[0,.04,.38],[0,.3,.66],[0,1.25,.74],[0,1.9,.55],[0,2.12,.22],[0,2.1,0]].map(p=>new T.Vector3(p[0],p[1],p[2]));
+ const tube=new T.Mesh(new T.TubeGeometry(new T.CatmullRomCurve3(pts),80,.028,10,false),MAT.blackMatte);tube.castShadow=true;g.add(tube);
+ C(0,1.7,0,.01,.01,.42,MAT.steel,o);C(0,2.02,0,.02,.02,.06,MAT.blackMatte,o);
+ const gap=.62*PI;
+ const shell=new T.Mesh(new T.SphereGeometry(.56,48,32,3*PI/2+gap/2,2*PI-gap,.12,PI-.12),MAT.rattan);
+ shell.position.set(0,1.05,0);shell.scale.set(1,1.2,1);shell.castShadow=true;g.add(shell);
+ const ring=new T.Mesh(new T.TorusGeometry(.5,.02,8,64),MAT.blackMatte);ring.position.set(0,1.05,-.33);ring.scale.set(.86,1.25,1);g.add(ring);
+ Sph(0,.56,0,.37,MAT.cushionGray,1,.34,1,o);Sph(0,.98,.17,.34,MAT.cushionGray,1,1.1,.42,o);
+ for(let i=0;i<3;i++)Sph(0,.72+i*.2,.2-.02*i,.18,MAT.cushionGray,1.6,.55,.5,o);
+ solids.push([16.8,3.05,17.8,4.05]);blob(17.3,3.55,1.1,1.1,.4,-.015);}
+// cserepes virágok a terasz szélén
+function flowerPot(x,z,i,y0=-.02){const clay=MAT.pot,soil=MAT.potDark,stem=MAT.leaf,r=rng(900+i*17),
+  petals=[MAT.fabricBlush,MAT.white,MAT.fabricMustard,MAT.fabricTerra][i%4];
+  C(x,y0,z,.17,.12,.34,clay);C(x,y0+.33,z,.15,.15,.012,soil);
+  for(let k=0;k<7;k++){const a=k/7*PI*2+r(),rr=.05+r()*.07,l=Sph(x+Math.cos(a)*rr,y0+.42+r()*.06,z+Math.sin(a)*rr,.08,MAT.leaf,1.5,.4,.8);l.rotation.set(0,-a,.45);}
+  for(let k=0;k<5;k++){const a=k/5*PI*2+r(),rr=.03+r()*.07,h=.2+r()*.2,fx=x+Math.cos(a)*rr,fz=z+Math.sin(a)*rr,fy=y0+.36+h;
+   C(fx,y0+.34,fz,.006,.006,h,stem,{seg:6,cast:false});
+   for(let p=0;p<6;p++){const b=p/6*PI*2;Sph(fx+Math.cos(b)*.032,fy,fz+Math.sin(b)*.032,.03,petals,1,.45,1,{cast:false});}
+   Sph(fx,fy+.008,fz,.017,MAT.fabricMustard,1,1,1,{cast:false});}}
+flowerPot(17.95,.62,0);flowerPot(17.95,1.25,1);flowerPot(14.98,4.38,2);flowerPot(8.75,9.0,3,-.02);flowerPot(5.85,9.0,0,-.02);
+// ---- kerítés (szürke, kőmintás betonpanel, mint a látványterven) ----
+function fence(x0,z0,x1,z1){const alongX=Math.abs(x1-x0)>Math.abs(z1-z0),L=alongX?x1-x0:z1-z0,n=Math.ceil(L/2.0),st=L/n;
+  if(alongX)B(x0,GROUND,z0-.03,x1,GROUND+1.8,z0+.03,MAT.fence,{uv:2});else B(x0-.03,GROUND,z0,x0+.03,GROUND+1.8,z1,MAT.fence,{uv:2});
+  for(let i=0;i<=n;i++){const a=(alongX?x0:z0)+i*st;if(alongX)B(a-.07,GROUND,z0-.07,a+.07,GROUND+1.85,z0+.07,MAT.fenceCap);else B(x0-.07,GROUND,a-.07,x0+.07,GROUND+1.85,a+.07,MAT.fenceCap);}
+  if(alongX)solids.push([x0,z0-.1,x1,z0+.1]);else solids.push([x0-.1,z0,x0+.1,z1]);}
+fence(PLOT.x0,PLOT.z0,PLOT.x1,PLOT.z0);fence(PLOT.x0,PLOT.z0,PLOT.x0,PLOT.z1);fence(PLOT.x1,PLOT.z0,PLOT.x1,PLOT.z1);
+// sövény, fák
+hedge(1.2,-5.4,19.5,-5.4,1.7,.75);hedge(29.3,-3.5,29.3,8.5,1.7,.75);
+solids.push([.6,-5.9,20.1,-4.9],[28.8,-4.1,29.8,9.1]);
+tree(2.8,-3.0,1.05);tree(12.5,-3.4,.95);tree(25.5,-2.6,1.25);tree(27.4,9.8,.85);tree(-.2,11.0,.7);
+for(const [x,z] of [[2.8,-3.0],[12.5,-3.4],[25.5,-2.6],[27.4,9.8],[-.2,11.0]])solids.push([x-.35,z-.35,x+.35,z+.35]);
+// ---- előkert: díszfüvek, buxus gömbök (a homlokzati látványterv szerint) ----
+bushLeaves([[5.6,GROUND+.33,9.6,.38,.36,.38],[9.2,GROUND+.33,9.65,.38,.36,.38],[2.0,GROUND+.28,8.3,.3,.28,.3],[11.4,GROUND+.28,8.1,.3,.28,.3],
+  [13.6,GROUND+.28,8.1,.3,.28,.3],[4.3,GROUND+.3,11.3,.34,.32,.34],[0.8,GROUND+.3,9.9,.32,.3,.32],[20.6,GROUND+.33,11.4,.38,.36,.38]],88);
+{const blade=new T.PlaneGeometry(.035,1,1,4);blade.translate(0,.5,0);const p=blade.attributes.position;
+ for(let i=0;i<p.count;i++){const y=p.getY(i);p.setX(i,p.getX(i)*(1-y*.92));p.setZ(i,y*y*.28);}blade.computeVertexNormals();
+ const tufts=[[1.2,8.5,.75],[2.9,9.2,.8],[3.6,8.7,.65],[4.9,9.0,.85],[5.0,10.6,.7],[2.4,10.9,.8],[3.6,11.6,.6],[1.4,11.5,.7],[.2,8.8,.6],
+   [9.2,10.6,.75],[9.25,8.7,.7],[10.3,8.0,.55],[12.4,8.05,.6],[14.3,8.1,.55],[15.4,5.2,.6],[17.2,5.25,.65],[20.6,9.0,.75],[20.7,6.0,.7],[-.5,4.0,.6],[-.5,1.2,.6]];
+ const per=70,im=new T.InstancedMesh(blade,MAT.grassBlade,tufts.length*per),im2=new T.InstancedMesh(blade,MAT.grassBlade2,tufts.length*per),o=new T.Object3D(),r=rng(5);let k=0,k2=0;
+ for(const [x,z,h] of tufts){for(let i=0;i<per*2;i++){const a=r()*PI*2,rr=r()*.12;o.position.set(x+Math.cos(a)*rr,GROUND,z+Math.sin(a)*rr);
+     o.rotation.set(0,a+PI/2,0);o.rotateX(-(.15+r()*.5));o.scale.set(1,h*(.6+r()*.5),1);o.updateMatrix();
+     if(i%2)im.setMatrixAt(k++,o.matrix);else im2.setMatrixAt(k2++,o.matrix);}}
+ im.castShadow=im2.castShadow=true;root.add(im,im2);}
+// postaláda-oszlop a személybejárónál
+B(8.75,GROUND,11.35,9.15,1.0,11.75,MAT.extWall,{solid:true});B(8.72,1.0,11.32,9.18,1.05,11.78,MAT.fenceCap);
+B(8.78,.62,11.75,9.12,.66,11.77,MAT.blackMatte,{cast:false});B(8.84,.3,11.75,9.06,.42,11.765,MAT.blackMatte,{cast:false});
+B(8.86,.82,11.75,9.04,.9,11.762,GLOW.ext,{cast:false});
+// kerti lámpák (állólámpa-oszlopok) a személybejáró mentén
+for(const z of [10.2,11.4]){C(6.2,GROUND,z,.05,.05,.6,MAT.blackMatte);C(6.2,GROUND+.5,z,.052,.052,.08,GLOW.ext,{cast:false});C(6.2,GROUND+.58,z,.06,.06,.03,MAT.blackMatte);}
+// fali lámpák a kőpilléreken és a teraszajtó mellett (a látványterv szerint)
+function lantern(x,y,z,nx,nz){const w=.16;
+  if(nz!==0){B(x-w/2,y-.2,z,x+w/2,y+.12,z+nz*.16,MAT.blackMatte);B(x-w/2+.02,y-.17,z+nz*.02,x+w/2-.02,y+.08,z+nz*.14,GLOW.ext,{cast:false});}
+  else{B(x,y-.2,z-w/2,x+nx*.16,y+.12,z+w/2,MAT.blackMatte);B(x+nx*.02,y-.17,z-w/2+.02,x+nx*.14,y+.08,z+w/2-.02,GLOW.ext,{cast:false});}
+  spot(x+nx*.2,y,z+nz*.2,x+nx*.2,y-3,z+nz*.2,12,.75,1,false,'#ffc58a',6);point(x+nx*.35,y,z+nz*.35,1.6,3,'#ffc58a');}
+lantern(6.23,1.75,8.80,0,1);lantern(8.37,1.75,8.80,0,1);lantern(14.72,1.95,4.85,1,0);
+
+// távoli fasor és szomszédos kertek – olcsó, de lombtextúrás koronák a horizont kitöltésére
+{const S=512,c=cv(S,S),gx=c.getContext('2d'),r=rng(321);gx.fillStyle='#3d5e2a';gx.fillRect(0,0,S,S);
+ for(let i=0;i<14000;i++){const v=r(),col=v<.33?'#2c4a1f':v<.66?'#4f7434':'#6a8f45';gx.fillStyle=col;gx.globalAlpha=.55+r()*.45;
+   gx.beginPath();gx.ellipse(r()*S,r()*S,2+r()*5,1.5+r()*3,r()*3,0,7);gx.fill();}
+ gx.globalAlpha=1;const ft=ctex(c);ft.repeat.set(3,2);
+ const fm=[M({map:ft,bumpMap:ft,bumpScale:3,roughness:.9}),M({map:ft,bumpMap:ft,bumpScale:3,roughness:.9,color:'#d8e6c4'}),M({map:ft,bumpMap:ft,bumpScale:3,roughness:.9,color:'#b9c9a5'})];
+ const g=new T.SphereGeometry(1,28,20),p=g.attributes.position;
+ for(let i=0;i<p.count;i++){const x=p.getX(i),y=p.getY(i),z=p.getZ(i),k=1+.1*Math.sin(x*5.1+1)*Math.sin(y*6.3)*Math.sin(z*5.7+2)+.05*Math.sin(x*11+y*9);p.setXYZ(i,x*k,y*k*.88,z*k);}g.computeVertexNormals();
+ const spots=[];for(let i=0;i<48;i++){const a=r()*PI*2,d=42+r()*34;spots.push([10+Math.cos(a)*d,4+Math.sin(a)*d*.85]);}
+ for(const [x,z] of [[-14,-14],[-18,3],[38,-12],[42,4],[4,-22],[18,-24],[30,-21],[-6,32],[14,33],[30,31]])spots.push([x,z]);
+ for(const [x,z] of spots){if(z>11&&z<22)continue;const s=1.3+r()*1.5,th=2.0*s;C(x,GROUND,z,.1*s,.18*s,th,BARK,{seg:8});
+   const mat=fm[(r()*3)|0];
+   for(let j=0;j<5;j++){const m=new T.Mesh(g,mat);m.position.set(x+(r()-.5)*1.7*s,GROUND+th+(.3+r()*1.3)*s,z+(r()-.5)*1.7*s);m.scale.setScalar((.9+r()*.6)*s);
+     m.rotation.set(r()*3,r()*3,r()*3);m.castShadow=true;m.receiveShadow=true;root.add(m);}}}
+
+// ======================================================================
+//  TETŐ – a homlokzati látványterv alapján
+//  Kontyolt (hipped) főtető 34°-os hajlásszöggel, gerinc +5,75 (helyszínrajz: +5,74),
+//  az utcai oldalon az előreugró (gardrób–előtér–WC) tömb fölött oromzatos keresztszárny
+//  fa burkolatú oromfallal, a bejárat fölött kisebb, kőburkolatú pillérekre támaszkodó
+//  előtető. Sötét, sima betoncserép, sötét ereszdeszka és csatorna, fa ereszaljzat.
+// ======================================================================
+const roofGroup=new T.Group();scene.add(roofGroup);
+const ROOF=(()=>{
+  const P={parent:roofGroup},so={parent:roofGroup,cast:false};
+  const pitch=34*PI/180,t=Math.tan(pitch),cs=Math.cos(pitch),ye=2.80,OV=.5;
+  const X0=-EPS-OV,X1=14.72+OV,Z0=-EPS-OV,Z1=7.62+OV,hw=(Z1-Z0)/2,zr=(Z0+Z1)/2,yr=ye+t*hw,xa=X0+hw,xb=X1-hw;
+  // keresztszárny (előreugró tömb: x 3,78–9,72, homlok z=8,22)
+  const go=.35,gx0=3.78-go,gx1=9.72+go,gc=(gx0+gx1)/2,ghw=(gx1-gx0)/2,GZ=8.22+.30,gA=Z1-ghw,gy=ye+t*ghw;
+  // előtető a bejárat fölött
+  const pe=2.42,px0=5.70,px1=8.90,pc=(px0+px1)/2,phw=(px1-px0)/2,PZ=9.12,py=pe+t*phw;
+  function face(pts,h,uv,mat,dy=0,down=false){
+    const tris=T.ShapeUtils.triangulateShape(pts.map(p=>new T.Vector2(p[0],p[1])),[]);
+    const pos=[],uvs=[],idx=[];
+    for(const [x,z] of pts){pos.push(x,h(x,z)+dy,z);const q=uv(x,z);uvs.push(q[0]/1.6,q[1]/1.25);}
+    for(const [a,b,c] of tris){const ny=(pts[b][1]-pts[a][1])*(pts[c][0]-pts[a][0])-(pts[b][0]-pts[a][0])*(pts[c][1]-pts[a][1]);
+      if((ny>0)!==down)idx.push(a,b,c);else idx.push(a,c,b);}
+    const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(pos,3));g.setAttribute('uv',new T.Float32BufferAttribute(uvs,2));
+    g.setIndex(idx);g.computeVertexNormals();const m=new T.Mesh(g,mat);m.castShadow=!down;m.receiveShadow=true;roofGroup.add(m);return m;}
+  // tetősík + alatta (12 cm-rel lejjebb) a fa ereszaljzat / héjazat alsó síkja
+  const plane=(pts,h,uv)=>{face(pts,h,uv,MAT.tile);face(pts,h,(x,z)=>[x*1.6/1.0,z*1.25/1.0],MAT.soffit,-.14,true);};
+  plane([[X0,Z0],[X1,Z0],[xb,zr],[xa,zr]],(x,z)=>ye+t*(z-Z0),(x,z)=>[x,(z-Z0)/cs]);                                   // északi
+  plane([[X0,Z1],[gx0,Z1],[gc,gA],[gx1,Z1],[X1,Z1],[xb,zr],[xa,zr]],(x,z)=>ye+t*(Z1-z),(x,z)=>[-x,(Z1-z)/cs]);        // déli (kivágással)
+  plane([[X0,Z0],[xa,zr],[X0,Z1]],(x,z)=>ye+t*(x-X0),(x,z)=>[-z,(x-X0)/cs]);                                        // nyugati konty
+  plane([[X1,Z0],[X1,Z1],[xb,zr]],(x,z)=>ye+t*(X1-x),(x,z)=>[z,(X1-x)/cs]);                                         // keleti konty
+  plane([[gx0,Z1],[gx0,GZ],[gc,GZ],[gc,gA]],(x,z)=>ye+t*(x-gx0),(x,z)=>[-z,(x-gx0)/cs]);                             // oromzat nyugati sík
+  plane([[gx1,Z1],[gc,gA],[gc,GZ],[gx1,GZ]],(x,z)=>ye+t*(gx1-x),(x,z)=>[z,(gx1-x)/cs]);                              // oromzat keleti sík
+  plane([[px0,8.22],[px0,PZ],[pc,PZ],[pc,8.22]],(x,z)=>pe+t*(x-px0),(x,z)=>[-z,(x-px0)/cs]);                         // előtető
+  plane([[px1,8.22],[pc,8.22],[pc,PZ],[px1,PZ]],(x,z)=>pe+t*(px1-x),(x,z)=>[z,(px1-x)/cs]);
+  // ---- gerinc- és élgerinc-cserepek, vápák ----
+  const V=(x,y,z)=>new T.Vector3(x,y,z);
+  function pipe(a,b,r,mat,cast=true){const d=V(b.x-a.x,b.y-a.y,b.z-a.z),L=d.length();const m=new T.Mesh(new T.CylinderGeometry(r,r,L,14),mat);
+    m.position.set((a.x+b.x)/2,(a.y+b.y)/2,(a.z+b.z)/2);m.quaternion.setFromUnitVectors(V(0,1,0),d.normalize());m.castShadow=cast;m.receiveShadow=true;roofGroup.add(m);return m;}
+  const rr=.1;
+  pipe(V(xa,yr+.01,zr),V(xb,yr+.01,zr),rr,MAT.ridge);
+  for(const [x,z] of [[X0,Z0],[X0,Z1]])pipe(V(x,ye+.01,z),V(xa,yr+.01,zr),.08,MAT.ridge);
+  for(const [x,z] of [[X1,Z0],[X1,Z1]])pipe(V(x,ye+.01,z),V(xb,yr+.01,zr),.08,MAT.ridge);
+  Sph(xa,yr+.02,zr,.11,MAT.ridge,1,1,1,P);Sph(xb,yr+.02,zr,.11,MAT.ridge,1,1,1,P);
+  pipe(V(gc,gy+.01,gA),V(gc,gy+.01,GZ),.085,MAT.ridge);
+  for(const x of [gx0,gx1])pipe(V(x,ye+.005,Z1),V(gc,gy+.005,gA),.03,MAT.gutter,false);
+  pipe(V(pc,py+.01,8.22),V(pc,py+.01,PZ),.06,MAT.ridge);
+  // ---- oromfal (fa burkolat) – keresztszárny és előtető ----
+  function gable(xl,xr,yb,yt,ht,z0,z1,mat){const s=new T.Shape();const xm=(xl+xr)/2;
+    s.moveTo(xl,yb);s.lineTo(xr,yb);s.lineTo(xr,yt);s.lineTo(xm,ht);s.lineTo(xl,yt);s.closePath();
+    const g=new T.ExtrudeGeometry(s,{depth:z1-z0,bevelEnabled:false});g.translate(0,0,z0);
+    const p=g.attributes.position,uv=g.attributes.uv;for(let i=0;i<p.count;i++)uv.setXY(i,p.getX(i)/2.2,p.getY(i)/2.2);
+    const m=new T.Mesh(g,mat);m.castShadow=m.receiveShadow=true;roofGroup.add(m);return m;}
+  const hAt=x=>ye+t*(ghw-Math.abs(x-gc))-.16;
+  gable(3.78,9.72,2.92,Math.max(hAt(3.78),2.93),gy-.16,8.12,8.24,MAT.gableWood);
+  // a fa oromzat alatti sötét osztópárkány
+  B(3.74,2.84,8.20,9.76,2.92,8.27,MAT.trim,P);
+  // oromdeszkák (sötét) a ferde éleken
+  for(const s of [-1,1]){const xe=s<0?gx0:gx1,a=V(xe,ye-.06,GZ+.02),b=V(gc,gy-.06,GZ+.02);
+    const d=V(b.x-a.x,b.y-a.y,0),L=d.length(),m=new T.Mesh(new T.BoxGeometry(L+.12,.24,.05),MAT.trim);
+    m.position.set((a.x+b.x)/2,(a.y+b.y)/2,GZ+.025);m.rotation.z=Math.atan2(d.y,d.x);m.castShadow=true;roofGroup.add(m);}
+  // előtető: oromzat, gerenda, kőpillérek
+  const pzF=PZ-.32;
+  gable(px0+.25,px1-.25,2.22,pe+t*.25-.14,py-.14,pzF-.1,pzF,MAT.gableWood);
+  B(5.95,2.12,pzF-.24,8.65,2.30,pzF+.02,MAT.trim,{parent:roofGroup});
+  B(5.95,2.10,pzF+.02,8.65,2.115,pzF+.03,GLOW.led,{parent:roofGroup,cast:false});
+  for(const s of [-1,1]){const xe=s<0?px0:px1,a=V(xe,pe-.05,PZ+.02),b=V(pc,py-.05,PZ+.02);
+    const d=V(b.x-a.x,b.y-a.y,0),L=d.length(),m=new T.Mesh(new T.BoxGeometry(L+.1,.2,.05),MAT.trim);
+    m.position.set((a.x+b.x)/2,(a.y+b.y)/2,PZ+.025);m.rotation.z=Math.atan2(d.y,d.x);m.castShadow=true;roofGroup.add(m);}
+  for(const x of [6.03,8.17]){B(x,-.02,pzF-.42,x+.4,2.12,pzF,MAT.pillar,{uv:1.2,solid:true});B(x-.03,2.1,pzF-.45,x+.43,2.16,pzF+.03,MAT.trim);}
+  // ---- ereszdeszkák, csatornák, lefolyók ----
+  const fB=ye-.2,fT=ye+.03;
+  B(X0,fB,Z0-.04,X1,fT,Z0,MAT.trim,P);B(X0-.04,fB,Z0-.04,X0,fT,Z1+.04,MAT.trim,P);B(X1,fB,Z0-.04,X1+.04,fT,Z1+.04,MAT.trim,P);
+  B(X0,fB,Z1,gx0,fT,Z1+.04,MAT.trim,P);B(gx1,fB,Z1,X1,fT,Z1+.04,MAT.trim,P);
+  B(gx0-.04,fB,Z1,gx0,fT,GZ,MAT.trim,P);B(gx1,fB,Z1,gx1+.04,fT,GZ,MAT.trim,P);
+  B(px0-.04,pe-.18,8.22,px0,pe+.03,PZ,MAT.trim,P);B(px1,pe-.18,8.22,px1+.04,pe+.03,PZ,MAT.trim,P);
+  const gr=.065,gyy=ye-.08,o=.09;
+  const run=pts=>{for(let i=1;i<pts.length;i++)pipe(V(pts[i-1][0],gyy,pts[i-1][1]),V(pts[i][0],gyy,pts[i][1]),gr,MAT.gutter);
+    for(const p of pts)Sph(p[0],gyy,p[1],gr,MAT.gutter,1,1,1,P);};
+  run([[X0-o,Z0-o],[X1+o,Z0-o]]);run([[X0-o,Z0-o],[X0-o,Z1+o],[gx0-o,Z1+o],[gx0-o,GZ]]);run([[X1+o,Z0-o],[X1+o,Z1+o],[gx1+o,Z1+o],[gx1+o,GZ]]);
+  for(const x of [px0-o,px1+o])pipe(V(x,pe-.08,8.22),V(x,pe-.08,PZ),.045,MAT.gutter);
+  const down=(xg,zg,xw,zw)=>{const yb=gyy-.4;pipe(V(xg,gyy,zg),V(xw,yb,zw),.045,MAT.gutter);Sph(xw,yb,zw,.045,MAT.gutter,1,1,1,P);
+    pipe(V(xw,yb,zw),V(xw,GROUND+.05,zw),.045,MAT.gutter);
+    for(let y=GROUND+.6;y<yb;y+=1.1)B(xw-.05,y,zw-.05,xw+.05,y+.03,zw+.05,MAT.gutter,so);};
+  down(X0-o,Z0-o,-EPS-.06,-EPS-.06);down(X1+o,Z0-o,14.72+.06,-EPS-.06);
+  down(X0-o,Z1+o,-EPS-.06,7.62+.06);down(X1+o,Z1+o,14.72+.06,7.62+.06);
+  // ---- kémény (LEIER LSK 18) – téglaburkolat, fedlap ----
+  B(8.13,ye,3.0,8.62,6.30,3.45,MAT.brick,{parent:roofGroup,uv:1});B(8.07,6.30,2.94,8.68,6.38,3.51,MAT.trim,P);
+  C(8.375,6.38,3.225,.07,.07,.22,MAT.steel,P);B(8.25,6.62,3.1,8.5,6.64,3.35,MAT.trim,P);
+  return {X0,X1,Z0,Z1,ye,yr};
+})();
+
+let carGroup,carBlob,carSolid;
+{const L=4.71,W=.915,WB=[.8,3.65],RW=.334,RA=.372,NS=4;
+ const car=new T.Group();car.position.set(23.5,PARK_Y,6.9);car.rotation.y=PI/2;root.add(car);carGroup=car;const o={parent:car};
+ const X=u=>u-L/2;
+ const lerpK=(K,u)=>{if(u<=K[0][0])return K[0][1];for(let i=1;i<K.length;i++)if(u<=K[i][0]){const a=K[i-1],b=K[i],t=(u-a[0])/(b[0]-a[0]);const s=t*t*(3-2*t)*.35+t*.65;return a[1]+(b[1]-a[1])*s;}return K[K.length-1][1];};
+ const TOPK=[[0,.64],[.1,.69],[.3,.725],[.7,.765],[1.0,.8],[1.6,.86],[2.4,.89],[3.4,.93],[4.1,.97],[4.55,.99],[4.66,.97],[4.71,.88]];
+ const BOTK=[[0,.2],[.12,.17],[.35,.16],[4.3,.18],[4.55,.26],[4.71,.34]];
+ const top=u=>lerpK(TOPK,u),bot0=u=>lerpK(BOTK,u);
+ const arch=u=>{let a=-1;for(const c of WB){const d=Math.abs(u-c);if(d<RA)a=Math.max(a,RW+Math.sqrt(RA*RA-d*d));}return a;};
+ const bot=u=>Math.max(bot0(u),arch(u));
+ const hw=u=>{const d=Math.min(u,L-u),rc=u<L/2?.6:.42;return W*(d<rc?.7+.3*Math.sqrt(1-((rc-d)/rc)**2):1);};
+ const ROOFK=[[1.6,.86],[1.8,1.0],[2.1,1.22],[2.45,1.38],[2.9,1.435],[3.3,1.42],[3.6,1.33],[3.9,1.15],[4.14,.97]];
+ const roof=u=>lerpK(ROOFK,u);
+ function superRing(b,t,w,n,k,M=48){const mid=(b+t)/2,hh=(t-b)/2,pts=[];
+   for(let j=0;j<M;j++){const a=2*PI*j/M,c=Math.cos(a),s=Math.sin(a);
+     let z=w*Math.sign(c)*Math.abs(c)**(2/n);const y=mid+hh*Math.sign(s)*Math.abs(s)**(2/n);z*=tumble((y-b)/(t-b||1),k);pts.push([y,z]);}
+   return pts;}
+ function tumble(fr,k){return fr>.55?1-(fr-.55)*k:1;}
+ const surfZ=(u,y)=>{const b=bot0(u),t=top(u),mid=(b+t)/2,hh=(t-b)/2;const tt=Math.min(.999,Math.abs((y-mid)/hh));return hw(u)*(1-tt**NS)**(1/NS)*tumble((y-b)/(t-b),.18);};
+ const ghW=u=>{const d=Math.min(u-1.6,4.14-u),f=d<.3?.88+.12*Math.sqrt(Math.max(0,1-((.3-d)/.3)**2)):1;return .76*f;};
+ const ghZ=(u,y)=>{const b=top(u)-.08,t=roof(u),mid=(b+t)/2,hh=(t-b)/2;const tt=Math.min(1,Math.abs((y-mid)/hh));return ghW(u)*(1-tt**5)**(1/5)*tumble((y-b)/(t-b),.5);};
+ function loft(u0,u1,N,ringFn){const pos=[],idx=[];let M=0;
+   for(let i=0;i<=N;i++){const u=u0+(u1-u0)*i/N,r=ringFn(u);M=r.length;for(const [y,z] of r)pos.push(X(u),y,z);}
+   for(let i=0;i<N;i++)for(let j=0;j<M;j++){const a=i*M+j,b=i*M+(j+1)%M,c=(i+1)*M+j,d=(i+1)*M+(j+1)%M;idx.push(a,c,b,b,c,d);}
+   for(const [i,u] of [[0,u0],[N,u1]]){const r=ringFn(u);let cy=0;for(const p of r)cy+=p[0];cy/=r.length;const ci=pos.length/3;pos.push(X(u),cy,0);
+     for(let j=0;j<M;j++){const a=i*M+j,b=i*M+(j+1)%M;if(i===0)idx.push(ci,a,b);else idx.push(ci,b,a);}}
+   const g=new T.BufferGeometry();g.setAttribute('position',new T.Float32BufferAttribute(pos,3));g.setIndex(idx);g.computeVertexNormals();return g;}
+ const paint=MAT.carPaint;paint.side=T.DoubleSide;MAT.carGlass.side=T.DoubleSide;
+ const tube=(pts,r,mat)=>{const m=new T.Mesh(new T.TubeGeometry(new T.CatmullRomCurve3(pts.map(p=>new T.Vector3(p[0],p[1],p[2]))),Math.max(8,pts.length*4),r,8,false),mat);car.add(m);return m;};
+ const badge=(x,y,z,nx,ny,nz,r)=>{const m=new T.Mesh(new T.CircleGeometry(r,32),MAT.roundel);m.position.set(x,y,z);m.lookAt(x+nx,y+ny,z+nz);car.add(m);return m;};
+ // karosszéria, üvegház, karosszériaszínű tető
+ car.add(new T.Mesh(loft(0,L,170,u=>{const a=arch(u);return superRing(bot0(u),top(u),hw(u),NS,.18,96).map(([y,z])=>Math.abs(z)>.6&&y<a?[a,z]:[y,z]);}),paint));
+ car.add(new T.Mesh(loft(1.6,4.14,110,u=>superRing(top(u)-.08,roof(u),ghW(u),5,.5)),MAT.carGlass));
+ car.add(new T.Mesh(loft(2.4,3.62,50,u=>{const t=roof(u),y0=t-.075,y1=t-.003,r=[];for(let k=0;k<=8;k++){const y=y0+(y1-y0)*k/8;r.push([y,ghZ(u,y)+.006]);}
+   const zt=ghZ(u,y1)*.95;r.push([t+.008,zt],[t+.01,0],[t+.008,-zt]);
+   for(let k=8;k>=0;k--){const y=y0+(y1-y0)*k/8;r.push([y,-(ghZ(u,y)+.006)]);}return r;}),paint));
+ for(const sd of [-1,1]){
+   // krómozott ablakkeret-alj, fekete B-oszlop
+   const bl=[];for(let u=1.75;u<=3.95;u+=.06){const y=top(u)-.02;bl.push([X(u),y,sd*(surfZ(u,y)+.004)]);}tube(bl,.007,MAT.chrome);
+   {const u=2.76,y0=top(u)+.02,y1=roof(u)-.1;B(X(u)-.04,y0,sd*(ghZ(u,(y0+y1)/2)+.004)-.01,X(u)+.04,y1,sd*(ghZ(u,(y0+y1)/2)+.004)+.01,MAT.carTrim,o);}
+   // ajtóhézagok
+   for(const u of [1.62,2.74,3.42]){const pts=[];const y0=bot(u)+.05,y1=top(u)-.03;for(let k=0;k<=8;k++){const y=y0+(y1-y0)*k/8;pts.push([X(u),y,sd*(surfZ(u,y)+.002)]);}tube(pts,.0035,MAT.carTrim);}
+   // vállvonal és alsó karakterél
+   {const pts=[];for(let u=.35;u<=4.55;u+=.1){const y=top(u)-.11;if(bot(u)<y-.03)pts.push([X(u),y,sd*(surfZ(u,y)+.001)]);}if(pts.length>3)tube(pts,.005,paint);}
+   {const pts=[];for(let u=1.25;u<=3.2;u+=.1){const y=.42+(u-1.25)*.05;pts.push([X(u),y,sd*(surfZ(u,y)+.001)]);}tube(pts,.004,paint);}
+   // kilincsek
+   for(const u of [2.45,3.3]){const y=top(u)-.1;R(X(u),y,sd*(surfZ(u,y)+.01),.16,.025,.018,.009,MAT.chrome,o);}
+   // visszapillantó tükör
+   {const u=1.78,y=top(u)+.08,z=sd*(hw(u)+.06);Sph(X(u),y,z,.1,paint,.7,.62,1.15,o);B(X(u)+.02,y-.07,sd*(hw(u)-.1),X(u)+.08,y-.02,sd*(hw(u)-.0),MAT.carTrim,o);
+     B(X(u)+.06,y-.04,z-.08,X(u)+.071,y+.04,z+.08,MAT.mirror,o);}
+   // küszöb fekete alsó éle
+   {const y=.21,z=surfZ(2,y);B(X(1.2),.17,sd*z-.02,X(3.25),.25,sd*z+.02,MAT.carTrim,o);}
+   // fényszóró: sötét ház + két "angel eye" gyűrű
+   {const hx=X(0);R(hx+.004,.56,sd*.43,.03,.08,.27,.015,MAT.alloyDark,o);
+     for(const zc of [.36,.49]){const rg=new T.Mesh(new T.TorusGeometry(.03,.006,8,32),GLOW.head);rg.rotation.y=PI/2;rg.position.set(hx-.014,.56,sd*zc);car.add(rg);
+       Sph(hx-.008,.56,sd*zc,.02,MAT.chrome,.5,1,1,o);}
+     B(hx-.014,.593,sd*.31,hx-.01,.598,sd*.55,GLOW.head,{parent:car,cast:false});}
+   // L alakú hátsó lámpa (hátfal + oldalra forduló rész)
+   {const x=X(L);B(x-.01,.79,sd*.34,x+.012,.85,sd*.64,GLOW.tail,{parent:car,cast:false});B(x-.01,.72,sd*.34,x+.012,.85,sd*.39,GLOW.tail,{parent:car,cast:false});
+     const pts=[];for(let u=4.42;u<=4.69;u+=.03){const y=.83;pts.push([X(u),y,sd*(surfZ(u,y)+.004)]);}tube(pts,.022,GLOW.tail);}
+ }
+ // kerékjárati bélés
+ for(const c of WB)for(const sd of [-1,1]){const g=new T.CylinderGeometry(RA,RA,.34,28,1,true,-PI/2,PI);g.rotateX(-PI/2);const m=new T.Mesh(g,M({color:'#111',roughness:.9,side:T.DoubleSide}));m.position.set(X(c),RW,sd*.77);car.add(m);}
+ // eleje: dupla vese hűtőrács, légbeömlők, rendszám, embléma
+ {const x=X(0);
+  for(const sd of [-1,1]){const zc=sd*.118;
+    const sh=rrShape(.2,.2,.06,T.Shape);sh.holes.push(rrShape(.17,.17,.045,T.Path));
+    const fg=new T.ExtrudeGeometry(sh,{depth:.05,bevelEnabled:false,curveSegments:10});fg.rotateY(-PI/2);
+    const fr=new T.Mesh(fg,MAT.chrome);fr.position.set(x+.015,.48,zc);car.add(fr);
+    B(x-.01,.39,zc-.085,x+.02,.57,zc+.085,MAT.carTrim,o);
+    for(let k=0;k<7;k++){const z=zc-.072+k*.024;B(x-.022,.395,z-.004,x-.01,.565,z+.004,MAT.chrome,o);}}
+  B(x-.012,.2,-.44,x+.01,.265,.44,MAT.carTrim,o);
+  for(let k=0;k<4;k++)B(x-.016,.21+k*.014,-.42,x-.01,.215+k*.014,.42,MAT.alloyDark,o);
+  for(const sd of [-1,1])B(x-.01,.22,sd*.5-.06,x+.02,.36,sd*.5+.06,MAT.carTrim,o);
+  B(x-.024,.27,-.26,x-.012,.37,.26,MAT.plate,o);
+  badge(X(.12),top(.12)+.004,0,-.35,1,0,.038);}
+ // hátulja: diffúzor, trapéz kipufogóvégek, rendszám, embléma, csomagtartó-él
+ {const x=X(L);
+  B(x-.01,.34,-.62,x+.016,.45,.62,MAT.carTrim,o);
+  for(const sd of [-1,1]){B(x-.02,.34,sd*.45-.1,x+.03,.405,sd*.45+.1,MAT.chrome,o);B(x+.029,.35,sd*.45-.085,x+.031,.395,sd*.45+.085,MAT.tyre,{parent:car,cast:false});}
+  B(x-.004,.55,-.26,x+.014,.66,.26,MAT.plate,o);
+  badge(x+.006,.76,0,1,0,0,.04);
+  B(X(4.6),top(4.6)-.005,-.66,X(4.7),top(4.6)+.012,.66,paint,o);
+  C(X(3.45),roof(3.45)-.01,0,.012,.03,.07,MAT.carTrim,o);}
+ // ablaktörlők
+ for(const sd of [-.3,.3])B(X(1.66),top(1.66)+.005,sd-.27,X(1.69),top(1.66)+.02,sd+.27,MAT.carTrim,o);
+ // kerekek: 225/45 R18, M kétküllős felni, kék M féknyereg, BMW agysapka
+ const tyreG=new T.CylinderGeometry(RW,RW,.225,48);tyreG.rotateX(PI/2);
+ const shG=new T.TorusGeometry(RW-.035,.035,12,48);
+ const rimG=new T.CylinderGeometry(.23,.23,.02,48);rimG.rotateX(PI/2);
+ const discG=new T.CylinderGeometry(.18,.18,.022,32);discG.rotateX(PI/2);
+ const spG=new T.BoxGeometry(.032,.18,.024),spF=new T.BoxGeometry(.014,.17,.006);
+ const caliper=M({color:'#1f4fb4',roughness:.35,metalness:.3});
+ for(const c of WB)for(const sd of [-1,1]){const x=X(c),z=sd*.79,y=RW;
+   const t=new T.Mesh(tyreG,MAT.tyre);t.position.set(x,y,z);car.add(t);
+   for(const e of [-1,1]){const sh=new T.Mesh(shG,MAT.tyre);sh.position.set(x,y,z+e*.08);car.add(sh);}
+   const rimBack=new T.Mesh(rimG,MAT.alloyDark);rimBack.position.set(x,y,z+sd*.06);car.add(rimBack);
+   const disc=new T.Mesh(discG,MAT.brake);disc.position.set(x,y,z+sd*.075);car.add(disc);
+   const cal=new T.Mesh(new T.TorusGeometry(.16,.032,8,16,1.1),caliper);cal.position.set(x,y,z+sd*.09);cal.rotation.z=.9;car.add(cal);
+   const lip=new T.Mesh(new T.TorusGeometry(.23,.012,8,48),MAT.alloy);lip.position.set(x,y,z+sd*.105);car.add(lip);
+   for(let k=0;k<5;k++)for(const off of [-.12,.12]){const a=k*2*PI/5+off;
+     const sp=new T.Mesh(spG,MAT.alloyDark);sp.position.set(x+Math.sin(a)*.125,y+Math.cos(a)*.125,z+sd*.1);sp.rotation.z=-a;car.add(sp);
+     const sf=new T.Mesh(spF,MAT.alloy);sf.position.set(x+Math.sin(a)*.125,y+Math.cos(a)*.125,z+sd*.114);sf.rotation.z=-a;car.add(sf);}
+   const hub=new T.Mesh(new T.CylinderGeometry(.05,.05,.03,24),MAT.alloyDark);hub.rotation.x=PI/2;hub.position.set(x,y,z+sd*.105);car.add(hub);
+   badge(x,y,z+sd*.121,0,0,sd,.028);}
+ car.traverse(m=>{if(m.isMesh){m.castShadow=true;m.receiveShadow=true;}});
+ carSolid=[22.58,4.55,24.42,9.25];solids.push(carSolid);carBlob=blob(23.5,6.9,2.1,5.0,.6,PARK_Y+.004);}
+
+// Letöltött glTF autómodell – a lap végi modul hívja; ha nincs internet, a fenti beépített autó marad
+window.L1placeCarModel=function(src,credit,opt={}){
+  src.updateMatrixWorld(true);
+  const g=new T.Group(),cache=new Map();
+  const glass=MP({color:'#10161b',metalness:.2,roughness:0,transparent:true,opacity:.45,depthWrite:false});
+  const paint=opt.paint?MP({color:opt.paint,roughness:.22,metalness:.65,clearcoat:1,clearcoatRoughness:.03}):null;
+  const detail=M({color:'#cfd2d6',roughness:.3,metalness:1});
+  // a Ferrari-modell részei név szerint (body, glass, trim, rim_*, wheel_*)
+  const part=o=>{for(let p=o;p;p=p.parent){const n=p.name||'';if(/^(body|glass|trim|rim_|wheel_)/.test(n))return n;}return '';};
+  const override=o=>{if(!paint)return null;const n=part(o);if(n==='body')return paint;if(n==='glass')return glass;if(/^(trim|rim_)/.test(n))return detail;return null;};
+  // menetirány a bal első és bal hátsó kerék helyzetéből
+  let fwd=null;{const f=src.getObjectByName('wheel_fl'),b=src.getObjectByName('wheel_rl');
+    if(f&&b){const fe=f.matrixWorld.elements,be=b.matrixWorld.elements;fwd=[fe[12]-be[12],fe[14]-be[14]];}}
+  const named=o=>{const ms=Array.isArray(o.material)?o.material:[o.material];return ms.some(m=>/glass|window|windshield|uveg/i.test(m.name||''))?glass:null;};
+  const tex=t=>{if(!t)return null;const n=new T.Texture(t.image);for(const k of ['flipY','wrapS','wrapT','colorSpace'])n[k]=t[k];n.needsUpdate=true;return n;};
+  const conv=m=>{if(cache.has(m))return cache.get(m);
+    const p={color:m.color?m.color.getHex():0x888888,roughness:m.roughness??.6,metalness:m.metalness??0,map:tex(m.map),normalMap:tex(m.normalMap),
+      roughnessMap:tex(m.roughnessMap),metalnessMap:tex(m.metalnessMap),emissive:m.emissive?m.emissive.getHex():0,emissiveMap:tex(m.emissiveMap),
+      emissiveIntensity:m.emissiveIntensity??1,transparent:!!m.transparent,opacity:m.opacity??1,side:m.side??T.FrontSide,alphaTest:m.alphaTest||0};
+    for(const k in p)if(p[k]===null)delete p[k];const r=M(p);cache.set(m,r);return r;};
+  // a modul saját THREE-példányából a lap THREE-példányába másoljuk a hálókat
+  src.traverse(o=>{if(!o.isMesh)return;const sg=o.geometry,geo=new T.BufferGeometry();
+    for(const k in sg.attributes){const a=sg.attributes[k].isInterleavedBufferAttribute?sg.attributes[k].clone():sg.attributes[k];geo.setAttribute(k,new T.BufferAttribute(a.array,a.itemSize,a.normalized));}
+    if(sg.index)geo.setIndex(new T.BufferAttribute(sg.index.array,1));
+    for(const gr of sg.groups)geo.addGroup(gr.start,gr.count,gr.materialIndex);
+    geo.applyMatrix4(new T.Matrix4().fromArray(o.matrixWorld.elements));
+    const mat=override(o)||named(o)||(Array.isArray(o.material)?o.material.map(conv):conv(o.material));
+    const m=new T.Mesh(geo,mat);m.castShadow=true;m.receiveShadow=true;g.add(m);});
+  const wrap=new T.Group();wrap.add(g);
+  let sz=new T.Box3().setFromObject(g).getSize(new T.Vector3());
+  g.rotation.y=fwd?Math.atan2(-fwd[0],fwd[1]):(sz.x>sz.z?PI/2:0)+CAR_MODEL_TURN;g.scale.setScalar((opt.len||4.5)/Math.max(sz.x,sz.z));
+  const box=new T.Box3().setFromObject(g),c=box.getCenter(new T.Vector3());sz=box.getSize(new T.Vector3());
+  g.position.set(-c.x,-box.min.y,-c.z);
+  const cx=opt.cx||23.5,zf=9.2;wrap.position.set(cx,PARK_Y,zf-sz.z/2);root.add(wrap);
+  carGroup.visible=false;carSolid.splice(0,4,cx-sz.x/2,zf-sz.z,cx+sz.x/2,zf);
+  carBlob.position.set(cx,carBlob.position.y,zf-sz.z/2);carBlob.scale.set(sz.x/2.1,sz.z/5.0,1);
+  if(credit){const d=document.createElement('div');d.style.opacity='.6';d.textContent=credit;document.getElementById('help').appendChild(d);}
+  setMode(curMode);
+};
+const CAR_MODEL_TURN=0;
+// ======================================================================
+//  ÉG, NAP, KÖRNYEZET
+// ======================================================================
+const skyU={top:{value:new T.Color()},mid:{value:new T.Color()},bot:{value:new T.Color()}};
+const sky=new T.Mesh(new T.SphereGeometry(300,32,16),new T.ShaderMaterial({side:T.BackSide,depthWrite:false,uniforms:skyU,
+  vertexShader:'varying vec3 vP;void main(){vP=normalize(position);gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
+  fragmentShader:'uniform vec3 top,mid,bot;varying vec3 vP;void main(){float h=vP.y;vec3 c=h>0.?mix(mid,top,pow(clamp(h,0.,1.),.55)):mix(mid,bot,clamp(-h*5.,0.,1.));gl_FragColor=vec4(c,1.);\n#include <tonemapping_fragment>\n#include <colorspace_fragment>\n}'}));
+sky.position.set(10,0,4);scene.add(sky);
+const sun=new T.DirectionalLight('#fff',1);sun.castShadow=true;sun.shadow.mapSize.set(TEST?2048:4096,TEST?2048:4096);
+Object.assign(sun.shadow.camera,{left:-21,right:21,top:21,bottom:-21,near:1,far:120});sun.shadow.camera.updateProjectionMatrix();sun.shadow.bias=-.0003;sun.shadow.normalBias=.03;
+sun.target.position.set(10.5,0,3.5);scene.add(sun,sun.target);
+const hemi=new T.HemisphereLight('#cfe0ff','#8a7a60',.5);scene.add(hemi);
+{const pm=new T.PMREMGenerator(renderer),es=new T.Scene();
+ es.add(new T.Mesh(new T.BoxGeometry(20,10,20),new T.MeshBasicMaterial({color:'#6b645c',side:T.BackSide})));
+ for(const [x,y,z,w,h,d,c,s] of [[0,4.9,0,6,.1,6,'#fff1dc',3],[-9.9,2,0,.1,3,6,'#cfe0ff',2.2],[9.9,2,-3,.1,3,4,'#ffd8b0',1.6],[0,2,9.9,6,3,.1,'#ffffff',1.2]]){
+   const m=new T.Mesh(new T.BoxGeometry(w,h,d),new T.MeshBasicMaterial({color:new T.Color(c).multiplyScalar(s)}));m.position.set(x,y,z);es.add(m);}
+ const floor=new T.Mesh(new T.PlaneGeometry(20,20),new T.MeshBasicMaterial({color:'#4b4038'}));floor.rotation.x=-PI/2;floor.position.y=-4.9;es.add(floor);
+ scene.environment=pm.fromScene(es,.04).texture;pm.dispose();}
+
+const MODES={
+  day:  {sky:['#4f8ad6','#e3edf4','#9aa48e'],sun:[4.6,'#fff6e8',[-16,30,24]],hemi:[1.0,'#dfeaff','#d4cdc0'],env:.85,int:.35,glow:.25,expo:.46},
+  dusk: {sky:['#3a5288','#f0b183','#6f6a5c'],sun:[2.6,'#ff9d55',[-30,6,12]],hemi:[.32,'#9fb2d8','#5b4c3c'],env:.22,int:1.2,glow:1.3,expo:.7},
+  night:{sky:['#060a17','#1c2540','#0a0c10'],sun:[0,'#fff',[-10,20,5]],hemi:[.07,'#40507a','#1a1612'],env:.08,int:1.2,glow:1.3,expo:.75},
+};
+let curMode='day';
+function setMode(k){curMode=k;const m=MODES[k];
+  skyU.top.value.set(m.sky[0]);skyU.mid.value.set(m.sky[1]);skyU.bot.value.set(m.sky[2]);
+  sun.intensity=m.sun[0];sun.color.set(m.sun[1]);sun.position.set(10.5+m.sun[2][0],m.sun[2][1],3.5+m.sun[2][2]);sun.visible=m.sun[0]>0;
+  hemi.intensity=m.hemi[0];hemi.color.set(m.hemi[1]);hemi.groundColor.set(m.hemi[2]);
+  for(const s of allStd)s.envMapIntensity=m.env;
+  scene.environmentIntensity=m.env;   // újabb three.js verziók (r163+) a jelenet szintjén kezelik
+  for(const {l,base} of lamps){l.intensity=base*m.int;l.visible=m.int>0;}
+  for(const g of glowMats)g.emissiveIntensity=g.userData.base*m.glow;
+  MAT.ceil.emissiveIntensity={day:.3,dusk:.16,night:.1}[k];
+  renderer.toneMappingExposure=m.expo*+document.getElementById('expo').value;
+  renderer.shadowMap.needsUpdate=true;
+  document.querySelectorAll('#modeBtns button').forEach(b=>b.classList.toggle('on',b.dataset.m===k));}
+
+// ======================================================================
+//  VEZÉRLÉS
+// ======================================================================
+const player={x:ROOMS[12].s[0],z:ROOMS[12].s[1],yaw:ROOMS[12].s[2],pitch:.02};
+let view='walk',locked=false;const keys={};const RAD=.22;
+function blocked(x,z){for(const r of solids)if(x>r[0]-RAD&&x<r[2]+RAD&&z>r[1]-RAD&&z<r[3]+RAD)return true;return false;}
+function roomAt(x,z){for(const rm of ROOMS)for(const r of rm.r)if(x>=r[0]&&x<=r[2]&&z>=r[1]&&z<=r[3])return rm;return null;}
+addEventListener('keydown',e=>{keys[e.code]=true;if(e.code==='KeyX'&&!e.repeat)document.body.classList.toggle('clean');if(e.code==='KeyT'&&!e.repeat&&view==='doll'){roofOn=!roofOn;applyRoof();}});addEventListener('keyup',e=>{keys[e.code]=false;});
+const startEl=document.getElementById('start'),cross=document.getElementById('cross');
+function lock(){if(view!=='walk')return;canvas.requestPointerLock&&canvas.requestPointerLock();}
+startEl.addEventListener('click',()=>{startEl.style.display='none';lock();});
+let drag=false,dragMoved=false,lx=0,ly=0;
+canvas.addEventListener('click',()=>{if(view==='walk'&&!locked&&!dragMoved)lock();});
+document.addEventListener('pointerlockchange',()=>{locked=document.pointerLockElement===canvas;cross.style.display=locked?'block':'none';});
+canvas.addEventListener('mousedown',e=>{drag=true;dragMoved=false;lx=e.clientX;ly=e.clientY;});
+addEventListener('mouseup',()=>{drag=false;});
+const orbit={th:.5,ph:.85,r:24,t:new T.Vector3(10,0,3.8)};
+addEventListener('mousemove',e=>{
+  if(view==='walk'){let dx=0,dy=0;
+    if(locked){dx=e.movementX;dy=e.movementY;}else if(drag){dx=e.clientX-lx;dy=e.clientY-ly;lx=e.clientX;ly=e.clientY;if(Math.abs(dx)+Math.abs(dy)>2)dragMoved=true;}
+    player.yaw-=dx*.0022;player.pitch=Math.max(-1.35,Math.min(1.35,player.pitch-dy*.0022));}
+  else if(drag){const dx=e.clientX-lx,dy=e.clientY-ly;lx=e.clientX;ly=e.clientY;orbit.th-=dx*.005;orbit.ph=Math.max(.15,Math.min(1.45,orbit.ph-dy*.005));}});
+canvas.addEventListener('wheel',e=>{if(view==='doll'){orbit.r=Math.max(8,Math.min(70,orbit.r*(1+Math.sign(e.deltaY)*.08)));e.preventDefault();}},{passive:false});
+// Android / iOS / iPadOS (az iPadOS Macintoshnak jelentkezik, ezért az érintőpontok száma is számít)
+const isMobile=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1)||!!(navigator.userAgentData&&navigator.userAgentData.mobile);
+document.body.classList.toggle('mobile',isMobile);document.body.classList.add('walk');
+if(isMobile){camera.fov=80;camera.updateProjectionMatrix();document.getElementById('fov').value=80;}
+const joy={x:0,y:0,on:false};
+let lookId=null,lookX=0,lookY=0;
+canvas.addEventListener('touchstart',e=>{if(lookId!==null)return;const t=e.changedTouches[0];lookId=t.identifier;lookX=t.clientX;lookY=t.clientY;document.body.classList.remove('menu');},{passive:true});
+canvas.addEventListener('touchmove',e=>{for(const t of e.changedTouches){if(t.identifier!==lookId)continue;const dx=t.clientX-lookX,dy=t.clientY-lookY;lookX=t.clientX;lookY=t.clientY;
+  if(view==='walk'){player.yaw-=dx*.004;player.pitch=Math.max(-1.3,Math.min(1.3,player.pitch-dy*.004));}
+  else{orbit.th-=dx*.006;orbit.ph=Math.max(.15,Math.min(1.45,orbit.ph-dy*.006));}}},{passive:true});
+const touchEnd=e=>{for(const t of e.changedTouches)if(t.identifier===lookId)lookId=null;};
+canvas.addEventListener('touchend',touchEnd,{passive:true});canvas.addEventListener('touchcancel',touchEnd,{passive:true});
+if(isMobile){
+  const joyEl=document.getElementById('joy'),knob=joyEl.firstElementChild;let joyId=null;
+  const joyMove=t=>{const b=joyEl.getBoundingClientRect(),R=b.width/2-10;let dx=t.clientX-(b.left+b.width/2),dy=t.clientY-(b.top+b.height/2);const d=Math.hypot(dx,dy);
+    if(d>R){dx*=R/d;dy*=R/d;}knob.style.transform='translate('+dx+'px,'+dy+'px)';joy.x=dx/R;joy.y=dy/R;joy.on=true;};
+  const joyEnd=e=>{for(const t of e.changedTouches)if(t.identifier===joyId){joyId=null;joy.on=false;joy.x=joy.y=0;knob.style.transform='';}};
+  joyEl.addEventListener('touchstart',e=>{e.preventDefault();if(joyId!==null)return;const t=e.changedTouches[0];joyId=t.identifier;joyMove(t);},{passive:false});
+  joyEl.addEventListener('touchmove',e=>{e.preventDefault();for(const t of e.changedTouches)if(t.identifier===joyId)joyMove(t);},{passive:false});
+  joyEl.addEventListener('touchend',joyEnd);joyEl.addEventListener('touchcancel',joyEnd);
+  document.getElementById('menuBtn').onclick=()=>document.body.classList.toggle('menu');
+  document.getElementById('hideBtn').onclick=()=>document.body.classList.toggle('clean');
+}
+let roofOn=true;
+function applyRoof(){const show=view==='walk'||roofOn;roofGroup.visible=show;ceilingGroup.visible=show;document.getElementById('roofChk').checked=roofOn;renderer.shadowMap.needsUpdate=true;}
+document.getElementById('roofChk').onchange=e=>{roofOn=e.target.checked;applyRoof();};
+function setView(v){view=v;document.body.classList.toggle('walk',v==='walk');document.body.classList.toggle('doll',v==='doll');document.querySelectorAll('#viewBtns button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
+  applyRoof();if(v==='doll'&&document.exitPointerLock)document.exitPointerLock();
+  renderer.shadowMap.needsUpdate=true;}
+function teleport(rm){player.x=rm.s[0];player.z=rm.s[1];player.yaw=rm.s[2];player.pitch=-.08;if(view!=='walk')setView('walk');}
+const rb=document.getElementById('roomBtns');
+for(const rm of ROOMS){const b=document.createElement('button');b.textContent=rm.k;b.title=rm.n;b.onclick=()=>teleport(rm);rb.appendChild(b);}
+document.querySelectorAll('#modeBtns button').forEach(b=>b.onclick=()=>setMode(b.dataset.m));
+document.querySelectorAll('#viewBtns button').forEach(b=>b.onclick=()=>setView(b.dataset.v));
+document.getElementById('expo').oninput=()=>{renderer.toneMappingExposure=MODES[curMode].expo*+document.getElementById('expo').value;};
+document.getElementById('fov').oninput=e=>{camera.fov=+e.target.value;camera.updateProjectionMatrix();};
+document.querySelectorAll('#qBtns button').forEach(b=>b.onclick=()=>{document.querySelectorAll('#qBtns button').forEach(x=>x.classList.toggle('on',x===b));
+  renderer.setPixelRatio(b.dataset.q==='2'?Math.min(devicePixelRatio,2):Math.min(devicePixelRatio,1)*.85);renderer.setSize(innerWidth,innerHeight);});
+addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);});
+
+const mapC=document.getElementById('map'),mg=mapC.getContext('2d'),MS=9.6,OX=14,OY=66;
+const mx=x=>OX+x*MS,my=z=>OY+z*MS;let curRoom=null;
+function drawMap(){mg.clearRect(0,0,mapC.width,mapC.height);
+  mg.fillStyle='rgba(120,150,90,.22)';mg.fillRect(mx(PLOT.x0),my(PLOT.z0),(PLOT.x1-PLOT.x0)*MS,(PLOT.z1-PLOT.z0)*MS);
+  mg.fillStyle='rgba(60,60,64,.55)';mg.fillRect(mx(-1.4),my(13.45),(28.6)*MS,6.5*MS);
+  mg.fillStyle='rgba(200,195,185,.35)';mg.fillRect(mx(PARK.x0),my(PARK.z0),(PARK.x1-PARK.x0)*MS,(PARK.z1-PARK.z0)*MS);
+  for(const rm of ROOMS){if(rm.k==='Kert'||rm.k==='Utcakép')continue;for(const r of rm.r){mg.fillStyle=rm.out?'rgba(200,190,170,.3)':(rm===curRoom?'rgba(201,138,90,.6)':'rgba(240,230,215,.2)');
+    mg.fillRect(mx(r[0]),my(r[1]),(r[2]-r[0])*MS,(r[3]-r[1])*MS);}}
+  mg.fillStyle='#ece5d8';for(const r of wallRects)mg.fillRect(mx(r[0]),my(r[1]),Math.max(1,(r[2]-r[0])*MS),Math.max(1,(r[3]-r[1])*MS));
+  const px=mx(player.x),py=my(player.z);mg.fillStyle='#ffb070';mg.beginPath();mg.arc(px,py,4.5,0,7);mg.fill();
+  const fx=-Math.sin(player.yaw),fz=-Math.cos(player.yaw);mg.strokeStyle='#ffb070';mg.lineWidth=2;mg.beginPath();mg.moveTo(px,py);mg.lineTo(px+fx*16,py+fz*16);mg.stroke();
+  mg.fillStyle='rgba(255,255,255,.6)';mg.font='10px Segoe UI';mg.fillText('É ↑  kert',8,12);mg.fillText('utca ↓',8,mapC.height-5);}
+mapC.addEventListener('click',e=>{const b=mapC.getBoundingClientRect(),k=mapC.width/b.width;const X=((e.clientX-b.left)*k-OX)/MS,Z=((e.clientY-b.top)*k-OY)/MS;
+  if(!blocked(X,Z)&&roomAt(X,Z)){player.x=X;player.z=Z;if(view!=='walk')setView('walk');}});
+
+const roomEl=document.getElementById('room');const clock=new T.Clock();let mapT=0;
+function camUpdate(){
+  if(view==='walk'){camera.position.set(player.x,EYE,player.z);camera.rotation.set(player.pitch,player.yaw,0);}
+  else{camera.position.set(orbit.t.x+orbit.r*Math.sin(orbit.ph)*Math.sin(orbit.th),orbit.r*Math.cos(orbit.ph),orbit.t.z+orbit.r*Math.sin(orbit.ph)*Math.cos(orbit.th));camera.lookAt(orbit.t);}}
+function loop(){requestAnimationFrame(loop);const dt=Math.min(clock.getDelta(),.05);
+  let moving=false;
+  for(const d of doors){const tgt=view==='walk'&&Math.hypot(player.x-d.cx,player.z-d.cz)<2.1?1:0;
+    if(d.t!==tgt){d.t+=Math.sign(tgt-d.t)*Math.min(Math.abs(tgt-d.t),dt*1.5);const e=d.t*d.t*(3-2*d.t);d.pv.rotation.y=d.a0+d.da*e;moving=true;}}
+  if(moving)renderer.shadowMap.needsUpdate=true;
+  if(view==='walk'){
+    const sp=(keys.ShiftLeft||keys.ShiftRight?3.2:1.6)*dt;let f=0,s=0;
+    if(keys.KeyW||keys.ArrowUp)f+=1;if(keys.KeyS||keys.ArrowDown)f-=1;if(keys.KeyA||keys.ArrowLeft)s-=1;if(keys.KeyD||keys.ArrowRight)s+=1;
+    let mag=1;
+    if(joy.on&&(joy.x||joy.y)){f=-joy.y;s=joy.x;mag=Math.min(1,Math.hypot(f,s));}
+    if(f||s){const l=Math.hypot(f,s);f/=l;s/=l;const sp2=sp*(joy.on?mag*(mag>.95?1.6:1):1);const fx=-Math.sin(player.yaw),fz=-Math.cos(player.yaw),rx=Math.cos(player.yaw),rz=-Math.sin(player.yaw);
+      const dx=(fx*f+rx*s)*sp2,dz=(fz*f+rz*s)*sp2;if(!blocked(player.x+dx,player.z))player.x+=dx;if(!blocked(player.x,player.z+dz))player.z+=dz;}
+    const rm=roomAt(player.x,player.z);
+    camera.position.set(player.x,EYE,player.z);camera.rotation.set(player.pitch,player.yaw,0);
+    if(rm!==curRoom&&rm){curRoom=rm;roomEl.textContent=rm.n;}
+  }else{
+    camera.position.set(orbit.t.x+orbit.r*Math.sin(orbit.ph)*Math.sin(orbit.th),orbit.r*Math.cos(orbit.ph),orbit.t.z+orbit.r*Math.sin(orbit.ph)*Math.cos(orbit.th));
+    camera.lookAt(orbit.t);roomEl.textContent='Makett nézet – húzd az egeret a forgatáshoz, görgő: nagyítás · T: tető ki/be';}
+  renderer.render(scene,camera);
+  if((mapT+=dt)>.08){mapT=0;drawMap();}
+}
+setMode('day');
+if(TEST){renderer.setPixelRatio(1);renderer.setSize(innerWidth,innerHeight);
+  window.__shot=function(c){if(c.mode)setMode(c.mode);if(c.view)setView(c.view);
+    if(c.p){player.x=c.p[0];player.z=c.p[1];player.yaw=c.p[2];player.pitch=c.p[3]||0;}
+    if(c.o){orbit.th=c.o[0];orbit.ph=c.o[1];orbit.r=c.o[2];if(c.o[3]!==undefined)orbit.t.set(c.o[3],0,c.o[4]);}
+    if(c.fov){camera.fov=c.fov;camera.updateProjectionMatrix();}
+    if(c.doors!==undefined)for(const d of doors){d.t=c.doors;d.pv.rotation.y=d.a0+d.da*c.doors;}
+    if(c.roof!==undefined){roofOn=c.roof;applyRoof();}
+    renderer.shadowMap.needsUpdate=true;camUpdate();renderer.render(scene,camera);drawMap();return canvas.toDataURL('image/jpeg',.9);};
+  window.__info=()=>({solids:solids.length,lamps:lamps.length,calls:renderer.info.render.calls,tris:renderer.info.render.triangles,doors:doors.length});
+  window.__ready=true;}
+else loop();
+})();
+</script>
+<script type="module">
+if(window.L1placeCarModel){
+  try{
+    const base='https://cdn.jsdelivr.net/npm/three@0.158.0/examples/jsm/';
+    const {GLTFLoader}=await import(base+'loaders/GLTFLoader.js');
+    const {DRACOLoader}=await import(base+'loaders/DRACOLoader.js');
+    const draco=new DRACOLoader().setDecoderPath(base+'libs/draco/gltf/');
+    const gltf=await new GLTFLoader().setDRACOLoader(draco).loadAsync('https://cdn.jsdelivr.net/gh/mrdoob/three.js@r158/examples/models/gltf/ferrari.glb');
+    window.L1placeCarModel(gltf.scene,'Autómodell: Ferrari 458 Italia – vicent091036 (Sketchfab), three.js példa',{paint:'#050505',len:4.53,cx:23.5});
+    draco.dispose();
+  }catch(e){console.warn('Az autómodell nem tölthető be, a beépített autó marad.',e);}
+}
+</script>
+</body></html>
